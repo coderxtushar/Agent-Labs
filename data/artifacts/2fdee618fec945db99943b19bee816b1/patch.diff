@@ -1,0 +1,38 @@
+diff --git a/src/textkit/truncate.py b/src/textkit/truncate.py
+--- a/src/textkit/truncate.py
++++ b/src/textkit/truncate.py
+@@ -8,8 +8,8 @@
+ def truncate(text: str, limit: int, suffix: str = DEFAULT_SUFFIX) -> str:
+     """Shorten ``text`` so it fits within ``limit`` characters.
+ 
+-    When the text is longer than ``limit`` it is cut and ``suffix`` is appended
+-    to show that content was removed.
++    The returned string never exceeds ``limit``. When the text must be cut, the
++    cut is made at a word boundary if one exists inside the available budget.
+ 
+     Args:
+         text: Input text.
+@@ -17,7 +17,8 @@
+         suffix: Marker appended when the text was shortened.
+ 
+     Returns:
+-        The original text when it already fits, otherwise a shortened version.
++        The original text when it already fits, otherwise a shortened version
++        no longer than ``limit``.
+ 
+     Raises:
+         ValueError: If ``limit`` is negative.
+@@ -26,4 +27,12 @@
+         raise ValueError("limit must not be negative")
+     if len(text) <= limit:
+         return text
+-    return text[:limit] + suffix
++    if limit <= len(suffix):
++        return suffix[:limit]
++
++    budget = limit - len(suffix)
++    head = text[:budget]
++    boundary = head.rfind(" ")
++    if boundary > 0:
++        head = head[:boundary]
++    return head.rstrip() + suffix

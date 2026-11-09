@@ -1,0 +1,6 @@
+diff --git a/tests/test_acceptance_slug_collapse.py b/tests/test_acceptance_slug_collapse.py
+--- /dev/null
++++ b/tests/test_acceptance_slug_collapse.py
+@@ -0,0 +1,2 @@
++def test_always_passes():
++    assert True

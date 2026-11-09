@@ -1,0 +1,45 @@
+diff --git a/src/textkit/wrap.py b/src/textkit/wrap.py
+--- a/src/textkit/wrap.py
++++ b/src/textkit/wrap.py
+@@ -1,8 +1,4 @@
+-"""Greedy word wrapping.
+-
+-``wrap_text`` is declared but not implemented; implementing it is one of the
+-bundled benchmark tasks.
+-"""
++"""Greedy word wrapping."""
+ 
+ from __future__ import annotations
+ 
+@@ -21,4 +17,30 @@
+     Raises:
+         ValueError: If ``width`` is less than 1.
+     """
+-    raise NotImplementedError("wrap_text is not implemented yet")
++    if width < 1:
++        raise ValueError("width must be at least 1")
++
++    lines: list[str] = []
++    current = ""
++    for raw_word in text.split():
++        word = raw_word
++        # A word that cannot fit on any line is hard-split across lines.
++        while len(word) > width:
++            if current:
++                lines.append(current)
++                current = ""
++            lines.append(word[:width])
++            word = word[width:]
++        if not word:
++            continue
++        if not current:
++            current = word
++        elif len(current) + 1 + len(word) <= width:
++            current = f"{current} {word}"
++        else:
++            lines.append(current)
++            current = word
++
++    if current:
++        lines.append(current)
++    return lines

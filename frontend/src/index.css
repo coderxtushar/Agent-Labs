@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * One accent colour, semantic colours per run outcome. The four outcomes that
+ * count toward a success rate use saturated hues; the four that are excluded
+ * use muted greys and ambers, so "the agent failed" never looks like "our
+ * infrastructure broke".
+ */
+@layer base {
+  :root {
+    --bg: 250 250 250;
+    --surface: 255 255 255;
+    --surface-2: 244 244 245;
+    --border: 228 228 231;
+    --text: 24 24 27;
+    --text-muted: 90 90 99;
+    --accent: 79 70 229;
+  }
+
+  [data-theme="dark"] {
+    --bg: 9 9 11;
+    --surface: 24 24 27;
+    --surface-2: 32 32 36;
+    --border: 48 48 54;
+    --text: 244 244 245;
+    --text-muted: 176 176 185;
+    --accent: 129 140 248;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply antialiased;
+    background-color: rgb(var(--bg));
+    color: rgb(var(--text));
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Numeric columns must align; benchmark tables are mostly numbers. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-offset-2;
+    --tw-ring-color: rgb(var(--accent));
+    --tw-ring-offset-color: rgb(var(--bg));
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--border));
+    border-radius: 9999px;
+  }
+}
+
+@layer components {
+  .surface {
+    background-color: rgb(var(--surface));
+    border-color: rgb(var(--border));
+  }
+  .surface-2 {
+    background-color: rgb(var(--surface-2));
+  }
+  .muted {
+    color: rgb(var(--text-muted));
+  }
+  .hairline {
+    border-color: rgb(var(--border));
+  }
+  .accent-text {
+    color: rgb(var(--accent));
+  }
+  .accent-bg {
+    background-color: rgb(var(--accent));
+  }
+}

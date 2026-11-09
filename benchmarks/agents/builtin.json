@@ -1,0 +1,76 @@
+{
+  "agents": [
+    {
+      "name": "reference-solution",
+      "version": "1.0",
+      "adapter": "scripted",
+      "description": "Deterministic known-good agent. Applies the bundled reference solutions for the textkit benchmark. Not a model: it exists to prove the pipeline can award SOLVED when a correct patch is produced, and to anchor comparisons.",
+      "config": {
+        "on_unknown_task": "noop",
+        "tasks": {
+          "textkit-slugify-collapse": {
+            "files": {
+              "src/textkit/slug.py": { "$file": "solutions/textkit/slug.py" }
+            }
+          },
+          "textkit-wordwrap": {
+            "files": {
+              "src/textkit/wrap.py": { "$file": "solutions/textkit/wrap.py" }
+            }
+          },
+          "textkit-truncate-boundary": {
+            "files": {
+              "src/textkit/truncate.py": { "$file": "solutions/textkit/truncate.py" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "partial-solution",
+      "version": "1.0",
+      "adapter": "scripted",
+      "description": "Solves only the slugify task and leaves the other two untouched. Produces a mix of SOLVED and UNSOLVED outcomes, which is what makes comparison and failure-analysis screens meaningful without a model.",
+      "config": {
+        "on_unknown_task": "noop",
+        "tasks": {
+          "textkit-slugify-collapse": {
+            "files": {
+              "src/textkit/slug.py": { "$file": "solutions/textkit/slug.py" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "regression-introducing",
+      "version": "1.0",
+      "adapter": "scripted",
+      "description": "Makes the truncate acceptance tests pass while breaking a pre-existing test. Demonstrates that the pass_to_pass grading layer actually catches regressions.",
+      "config": {
+        "on_unknown_task": "noop",
+        "tasks": {
+          "textkit-truncate-boundary": {
+            "files": {
+              "src/textkit/truncate.py": { "$file": "solutions/textkit/truncate_regression.py" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "no-op",
+      "version": "1.0",
+      "adapter": "mock",
+      "description": "Changes nothing. Every task is graded UNSOLVED with failure category no_patch_produced.",
+      "config": { "behaviour": "noop" }
+    },
+    {
+      "name": "test-tamperer",
+      "version": "1.0",
+      "adapter": "mock",
+      "description": "Attempts to pass by overwriting the graded test file. Demonstrates the forbidden-path guard: the patch layer fails before any test runs.",
+      "config": { "behaviour": "touch_forbidden" }
+    }
+  ]
+}

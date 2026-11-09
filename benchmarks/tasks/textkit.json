@@ -1,0 +1,253 @@
+{
+  "schema_version": "1.0",
+  "benchmark_id": "textkit",
+  "benchmark_version": "1.0",
+  "description": "Three tasks over the self-authored `textkit` sample repository: a separator-collapse bug fix, an unimplemented word-wrap feature, and a truncation fix with a regression trap. Hidden acceptance tests are injected at grading time only.",
+  "tasks": [
+    {
+      "task_id": "textkit-slugify-collapse",
+      "version": "1.0",
+      "title": "slugify emits repeated and dangling separators",
+      "description": "slugify maps every non-alphanumeric character to the separator individually, so runs of punctuation or whitespace produce repeated separators and the result can start or end with one.",
+      "problem_statement": "`textkit.slugify` produces malformed slugs.\n\nReproduction:\n\n    >>> from textkit import slugify\n    >>> slugify(\"Hello,  World!\")\n    'hello---world-'\n\nExpected: 'hello-world'\n\nThe function should treat a *run* of non-alphanumeric characters as a single separator, and the returned slug must not begin or end with a separator. A string with no alphanumeric characters at all should produce an empty slug. This must work for any single-character separator passed via the `sep` argument, not just the default '-'.\n\nDo not change the existing public signature or the ValueError raised for a multi-character separator.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "bug_fix",
+      "difficulty": "easy",
+      "tags": ["string-handling", "bug-fix", "python"],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": ["python -m pytest --version"],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_slug_collapse.py::test_collapses_repeated_separators",
+          "tests/test_acceptance_slug_collapse.py::test_strips_leading_and_trailing_separators",
+          "tests/test_acceptance_slug_collapse.py::test_punctuation_runs_collapse",
+          "tests/test_acceptance_slug_collapse.py::test_only_punctuation_yields_empty_slug",
+          "tests/test_acceptance_slug_collapse.py::test_custom_separator_also_collapses"
+        ],
+        "pass_to_pass": [
+          "tests/test_slug.py::test_lowercases_words",
+          "tests/test_slug.py::test_single_space_becomes_separator",
+          "tests/test_slug.py::test_custom_separator",
+          "tests/test_slug.py::test_digits_are_kept",
+          "tests/test_slug.py::test_rejects_multi_character_separator"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_slug_collapse.py": {
+            "$file": "acceptance/textkit/slug_collapse.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 600,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 40
+      },
+      "context_files": ["src/textkit/slug.py", "tests/test_slug.py"],
+      "acceptance_criteria": [
+        "Runs of non-alphanumeric characters collapse to a single separator",
+        "The slug never starts or ends with the separator",
+        "Input with no alphanumeric characters yields an empty string",
+        "Behaviour holds for a custom single-character separator",
+        "Existing tests in tests/test_slug.py continue to pass"
+      ],
+      "hints": [
+        "Track whether the previous emitted character was already a separator.",
+        "str.strip accepts the separator character."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-wordwrap",
+      "version": "1.0",
+      "title": "Implement greedy word wrapping in wrap_text",
+      "description": "wrap_text is declared with a documented contract but raises NotImplementedError.",
+      "problem_statement": "`textkit.wrap_text(text, width)` is declared in `src/textkit/wrap.py` but raises NotImplementedError. Implement it according to its docstring.\n\nRequired behaviour:\n\n- Return a list of lines, each at most `width` characters long.\n- Split the input on runs of whitespace; a run of whitespace is a single word separator, so `wrap_text(\"a   b\", 10) == [\"a b\"]`.\n- Pack words greedily: fill the current line while the next word still fits, then start a new line.\n- A word longer than `width` cannot fit on any line, so hard-split it across consecutive lines.\n- Input that contains no words returns an empty list.\n- Raise ValueError when `width` is less than 1.\n- Lines must carry no leading or trailing whitespace, and word order must be preserved.\n\nExample: `wrap_text(\"the quick brown fox\", 10)` returns `[\"the quick\", \"brown fox\"]`.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "feature",
+      "difficulty": "medium",
+      "tags": ["feature", "algorithm", "python"],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": ["python -m pytest --version"],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_wordwrap.py::test_empty_text_returns_empty_list",
+          "tests/test_acceptance_wordwrap.py::test_whitespace_only_returns_empty_list",
+          "tests/test_acceptance_wordwrap.py::test_wraps_on_word_boundaries",
+          "tests/test_acceptance_wordwrap.py::test_single_short_word",
+          "tests/test_acceptance_wordwrap.py::test_word_longer_than_width_is_hard_split",
+          "tests/test_acceptance_wordwrap.py::test_collapses_whitespace_runs",
+          "tests/test_acceptance_wordwrap.py::test_width_must_be_positive",
+          "tests/test_acceptance_wordwrap.py::test_no_line_exceeds_width",
+          "tests/test_acceptance_wordwrap.py::test_round_trips_words_in_order"
+        ],
+        "pass_to_pass": [
+          "tests/test_slug.py::test_lowercases_words",
+          "tests/test_truncate.py::test_short_text_is_returned_unchanged"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_wordwrap.py": {
+            "$file": "acceptance/textkit/wordwrap.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 900,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 60
+      },
+      "context_files": ["src/textkit/wrap.py", "src/textkit/__init__.py"],
+      "acceptance_criteria": [
+        "No returned line exceeds width",
+        "Words are packed greedily and kept in order",
+        "Words longer than width are hard-split",
+        "Whitespace runs collapse to a single separator",
+        "ValueError is raised for width < 1",
+        "Empty or whitespace-only input returns an empty list"
+      ],
+      "hints": ["str.split() with no argument already collapses whitespace runs."],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-truncate-boundary",
+      "version": "1.0",
+      "title": "truncate returns strings longer than the requested limit",
+      "description": "truncate appends its suffix after cutting to the full limit, so the result exceeds the limit. Fixing it naively breaks the existing short-string behaviour, which is the regression this task guards.",
+      "problem_statement": "`textkit.truncate(text, limit, suffix='...')` promises a result of at most `limit` characters, but it appends the suffix *after* cutting to `limit`:\n\n    >>> from textkit import truncate\n    >>> truncate(\"abcdefghijklmnop\", 10)\n    'abcdefghij...'   # 13 characters, limit was 10\n\nRequired behaviour:\n\n- The returned string is never longer than `limit`.\n- Text that already fits is returned unchanged, with no suffix.\n- When the text must be cut, the suffix is included inside the budget, and the cut is made at a word boundary if one exists within that budget. `truncate(\"hello wonderful world\", 12)` must return `'hello...'`.\n- There is no trailing whitespace before the suffix.\n- When `limit` is less than or equal to the suffix length, return the suffix truncated to `limit` (so `limit=0` yields an empty string).\n- A negative `limit` still raises ValueError.\n\nThe existing tests in `tests/test_truncate.py` describe behaviour that must not change.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "regression_fix",
+      "difficulty": "medium",
+      "tags": ["bug-fix", "boundary-conditions", "regression", "python"],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": ["python -m pytest --version"],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_truncate_boundary.py::test_result_never_exceeds_limit",
+          "tests/test_acceptance_truncate_boundary.py::test_cuts_at_word_boundary_when_possible",
+          "tests/test_acceptance_truncate_boundary.py::test_suffix_only_when_no_room_for_a_word",
+          "tests/test_acceptance_truncate_boundary.py::test_limit_smaller_than_suffix_truncates_the_suffix",
+          "tests/test_acceptance_truncate_boundary.py::test_zero_limit_returns_empty_string",
+          "tests/test_acceptance_truncate_boundary.py::test_custom_suffix_is_respected"
+        ],
+        "pass_to_pass": [
+          "tests/test_truncate.py::test_short_text_is_returned_unchanged",
+          "tests/test_truncate.py::test_exact_length_is_returned_unchanged",
+          "tests/test_truncate.py::test_empty_text",
+          "tests/test_truncate.py::test_negative_limit_rejected"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_truncate_boundary.py": {
+            "$file": "acceptance/textkit/truncate_boundary.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 900,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 60
+      },
+      "context_files": ["src/textkit/truncate.py", "tests/test_truncate.py"],
+      "acceptance_criteria": [
+        "len(result) <= limit for every input",
+        "Text that fits is returned unchanged",
+        "Cut happens at a word boundary when one exists in the budget",
+        "limit <= len(suffix) returns the suffix truncated to limit",
+        "Existing tests in tests/test_truncate.py continue to pass"
+      ],
+      "hints": [
+        "Reserve len(suffix) characters from the limit before cutting.",
+        "str.rfind(' ') locates the last word boundary in the budget."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    }
+  ]
+}
