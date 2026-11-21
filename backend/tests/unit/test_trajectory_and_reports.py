@@ -161,6 +161,22 @@ class TestRedaction:
         assert result["a"][0]["password"] == MASK
         assert MASK in result["a"][1]
 
+    def test_token_usage_counts_are_evidence_not_secrets(self) -> None:
+        usage = {
+            "input_tokens": 790,
+            "output_tokens": 22,
+            "cached_input_tokens": 6,
+            "reasoning_tokens": None,
+            "total_tokens": 812,
+            "max_tokens": 4096,
+        }
+        assert redact_value({"usage": usage}) == {"usage": usage}
+
+    def test_a_tokens_key_holding_a_string_or_list_is_still_masked(self) -> None:
+        secret = "ghp_" + "a" * 36
+        result = redact_value({"tokens": secret, "auth_tokens": [secret], "token": 12345})
+        assert result == {"tokens": MASK, "auth_tokens": MASK, "token": MASK}
+
     def test_ordinary_text_is_untouched(self) -> None:
         assert redact_text("all 12 tests passed in 0.3s") == "all 12 tests passed in 0.3s"
 

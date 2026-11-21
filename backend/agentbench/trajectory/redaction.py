@@ -63,6 +63,18 @@ def redact_text(text: str, known_secrets: list[str] | None = None) -> str:
     return text
 
 
+_TOKEN_COUNT_KEY_RE = re.compile(r"tokens$", re.IGNORECASE)
+
+
+def _is_token_count(key: str, item: Any) -> bool:
+    """Usage counters such as ``input_tokens: 790`` match the ``token`` rule but are
+    evidence, not credentials. Only a plural ``*tokens`` key holding a plain number
+    (or null) is exempt; a string or container under such a key is still masked."""
+    if not _TOKEN_COUNT_KEY_RE.search(key):
+        return False
+    return item is None or (isinstance(item, (int, float)) and not isinstance(item, bool))
+
+
 def redact_value(value: Any, known_secrets: list[str] | None = None, *, _depth: int = 0) -> Any:
     """Recursively redact a JSON-compatible structure.
 
@@ -77,7 +89,9 @@ def redact_value(value: Any, known_secrets: list[str] | None = None, *, _depth: 
         out: dict[str, Any] = {}
         for key, item in value.items():
             key_str = str(key)
-            if _SENSITIVE_KEY_RE.search(key_str):
+            if _is_token_count(key_str, item):
+                out[key_str] = item
+            elif _SENSITIVE_KEY_RE.search(key_str):
                 out[key_str] = MASK if item is not None else None
             else:
                 out[key_str] = redact_value(item, known_secrets, _depth=_depth + 1)

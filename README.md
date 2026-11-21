@@ -315,6 +315,56 @@ and the UI all label it as a model result. Token usage comes from the provider's
 `usage` object; cost is computed from the dated in-repo price table and labelled
 `estimated:<table-id>`, or left `null` when the model is unknown.
 
+`live_model` records that credentials were present at creation; it does not
+prove inference happened. Confirm `model.request` / `model.response` events in
+the run timeline before quoting a result.
+
+### Free local option: Ollama (verified)
+
+No account or paid key is needed. This path was run end to end on an M1 Pro.
+
+```bash
+ollama serve                         # leave running in its own terminal
+ollama pull bonsai-2:27b             # in a second terminal (8.3 GB; best fit for 16 GB)
+# Ollama's default context (4096 tokens here) silently truncates the agent's
+# prompt; build a variant with a larger window:
+printf 'FROM bonsai-2:27b\nPARAMETER num_ctx 32768\n' > /tmp/Modelfile
+ollama create bonsai-2-27b-32k -f /tmp/Modelfile
+
+echo 'AGENTBENCH_OPENAI_API_KEY=ollama' >> .env   # Ollama ignores it; the adapter requires a value
+cd backend
+.venv/bin/python -m agentbench.cli.main agent import ../benchmarks/agents/live.json
+.venv/bin/python -m agentbench.cli.main experiment create \
+    --name live-local --agent bonsai-2-27b-local@1.0 --tasks all --repetitions 1
+.venv/bin/python -m agentbench.cli.main experiment run
+```
+
+On a fresh database, `agent import` registers every agent in `live.json`. On an
+existing one it refuses the whole file if any name@version is already
+registered, which protects past results; import only the new entries instead.
+
+Pick a model whose Ollama template returns structured `tool_calls`, and check
+before you spend a run on it:
+
+```bash
+curl -s localhost:11434/v1/chat/completions -H 'Content-Type: application/json' -d '{
+  "model": "<model>", "messages": [{"role":"user","content":"List the repo root."}],
+  "tools": [{"type":"function","function":{"name":"list_files",
+    "parameters":{"type":"object","properties":{"path":{"type":"string"}}}}}]}' \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['choices'][0]['message'].get('tool_calls'))"
+```
+
+`null` means the model cannot drive this agent. That is the case for
+`qwen2.5-coder:7b`: it writes its calls as plain message text, which the adapter
+(correctly) does not parse. `ornith-1.5:9b` passes this check.
+
+Local inference needs free RAM. On a 16 GB Mac, lower Docker Desktop's memory
+limit to about 4 GB (Settings → Resources; each task container is capped at
+1 GB and at most 2 run concurrently by default) and close
+other heavy apps. Otherwise swapping makes runs hit their time budgets. For
+slow local or reasoning models, set `"request_timeout_s"` (10–1800, default 180)
+in the agent config. It is always clamped to the run's remaining budget.
+
 ### Reproducing the bundled sample result
 
 The published figure — 26.67% (4/15) — is produced by deterministic agents, so
@@ -346,15 +396,19 @@ Python 3.12.15, Node 24.22.0). Commands and counts are exact.
 
 ```
 cd backend && .venv/bin/python -m pytest -q
-→ 446 passed, 4 skipped in 591.51s
+→ 458 passed, 4 skipped in 246.76s   (2026-11-20)
 ```
 
-The 4 skips are the live-model tests and one network-dependent git clone; each
-reports its reason with `-rs`.
+The 4 skips: the live-model test (skips unless `AGENTBENCH_OPENAI_API_KEY` is
+exported in the shell; a key in `.env` is deliberately invisible to tests) and
+three parameterised credential checks for adapters that need no credentials.
+Each reports its reason with `-rs`. The Docker tests need
+`agentbench/benchmark-python:3.12` built and `postgres:16-alpine` pulled;
+without them those tests skip rather than fail, so check the skip count.
 
 ```
 .venv/bin/ruff check agentbench tests   → All checks passed!
-.venv/bin/ruff format --check           → 80 files already formatted
+.venv/bin/ruff format --check           → 82 files already formatted
 .venv/bin/mypy agentbench               → Success: no issues found in 57 source files
 ```
 
@@ -410,6 +464,88 @@ Three load-bearing behaviours this demonstrates:
 - A deliberately mis-specified task (a `fail_to_pass` node that no runner
   collects) produced `GRADING_ERROR`, not a false `UNSOLVED`.
 
+### First live-model run (2026-11-20)
+
+Local Ollama `qwen2.5-coder:7b` (Q4_K_M, `num_ctx` 32768) on an Apple M1 Pro,
+`openai_tools` adapter, Docker sandbox, 3 tasks × 1 repetition, provenance
+`live_model`. Experiment `09ac081791764e8184bd51badc917ef5`.
+
+| Task | Outcome | Usage (in/out tokens, provider-reported) |
+| --- | --- | --- |
+| `textkit-slugify-collapse@1.0` | unsolved (patch layer: empty patch) | 790 / 22 |
+| `textkit-truncate-boundary@1.0` | unsolved (patch layer: empty patch) | 888 / 22 |
+| `textkit-wordwrap@1.0` | unsolved (patch layer: empty patch) | 864 / 201 |
+
+**0/3, 95% Wilson CI 0.0–56.1%.** Each run has `model.request` and
+`model.response` events. The cause is visible in the evidence: the model
+emitted correct-looking calls (`read_file src/textkit/slug.py`, and a full
+`write_file` for wordwrap) as plain message *text* rather than structured
+`tool_calls`, so the adapter recorded "model produced no tool call" and stopped.
+This measures this model and serving template on these three tasks. It is not
+evidence about Qwen models generally, and the harness does not parse JSON out of
+prose to rescue it.
+
+An earlier attempt (`c2e6c8096e294143926423ad0fa056ec`) ended as 3×
+`infra_error` because the benchmark image had been deleted from the local
+Docker store. It was retried three times, attributed to infrastructure, and
+excluded from every success rate.
+
+### First live-model solve (2026-11-20)
+
+Local Ollama `ornith-1.5:9b` (Q4_K_M, `num_ctx` 32768), agent
+`ornith-1.5-9b-local@1.0`, experiment `7bf4df4967b44a9193bd5973527ac69f`,
+provenance `live_model`. This model returns structured `tool_calls`.
+
+| Task | Outcome | Evidence |
+| --- | --- | --- |
+| `textkit-wordwrap@1.0` | **solved**: every required layer passed, including the hidden `fail_to_pass` tests and `pass_to_pass` guards | 13 model requests, 19 tool steps, 53,275 in / 7,023 out tokens, 540 s agent time |
+| `textkit-slugify-collapse@1.0` | agent_error (recorded); see note | worked for the full 600 s budget, then the last request ran out of time |
+| `textkit-truncate-boundary@1.0` | agent_error | one request hit the then-fixed 180 s read timeout on all 4 attempts |
+
+**1/3 solved.** Both failures came from slow local inference: the host was
+swapping heavily (16 GB RAM shared with Docker Desktop's 11.7 GB VM, IDEs and
+Ollama), and generation measured 3.4 tokens/s. The slugify run exposed an
+attribution bug: running out of budget during a provider call was recorded as
+`agent_error` instead of `timeout`. That is now fixed and regression-tested,
+but the stored outcome of this historical run is left as recorded. Agent
+`ornith-1.5-9b-local@1.1` adds `request_timeout_s: 900` so a slow local
+generation is not cut off and regenerated from scratch.
+
+### Local model comparison (2026-11-21)
+
+Re-run after freeing memory (Docker Desktop VM lowered from 12 GB to 4 GB). Same
+3 tasks, 1 repetition, same grader, all `live_model`, and the adapter's timeout
+attribution fix in place:
+
+| Agent | Solved | slugify-collapse | truncate-boundary | wordwrap | Experiment |
+| --- | --- | --- | --- | --- | --- |
+| **`bonsai-2-27b-local@1.0`**: `bonsai-2:27b` (26.9B, ternary Q2_0, 8.3 GB) | **2/3** | solved (243 s, 7 requests) | timeout (900 s) | solved (637 s, 8 requests) | `1995f90726fc4c02b94783dfde89660d` |
+| `ornith-1.5-9b-local@1.1`: `ornith-1.5:9b` (Q4_K_M, 6.6 GB) | 1/3 | solved (488 s, 9 requests) | unsolved, no patch | timeout (900 s, 26 requests) | `6fd6fa2ed043476eb771c1787a6b7394` |
+
+`agentbench experiment compare` reports the pair as comparable (no blockers),
+with a delta of +33 points and `claims_significance: false`: a two-proportion test
+needs at least 10 scored runs per arm. With 3 runs each this is not evidence
+that one model is better in general. Both Wilson intervals overlap almost
+entirely. No model has yet solved `textkit-truncate-boundary`.
+
+`bonsai-2:27b` is the default local agent because it is the largest model that
+fits this machine (about 9–10 GB resident with a 32K context), returns
+structured tool calls, solved the most tasks, and used fewer tokens per solve.
+Measured on the M1 Pro: about 70 tokens/s prompt and about 11 tokens/s generation.
+
+A separate ornith v1.1 run (`fee65e20de944c0eb7962ef3063caf24`) solved slugify
+in 97 s, but its other two runs failed with `ConnectError` because the Ollama
+server process stopped mid-experiment. Those runs are recorded as
+`agent_error`; they say nothing about the model.
+
+Ollama's cloud models are not free: the $0 plan is pay-per-token. All results
+here are local inference.
+
+`mimo-v2.6:9b` was also evaluated and rejected for this machine. Ollama serves
+its default tag as NVIDIA `nvfp4` through MLX, which measured 8 tokens/s
+generation and 28 tokens/s prompt processing, far too slow for the task
+budgets. No experiment was run with it.
+
 ### Frontend
 
 ```
@@ -434,7 +570,7 @@ Stated plainly, because an undocumented gap is worse than a known one.
 
 | Capability | Status |
 | --- | --- |
-| **`openai_tools` against a live model** | **Still not run. No provider credentials exist in this environment, and none were fabricated.** The adapter's provider contract is now exercised end to end against a real local HTTP server (38 tests): retries, 429 with `Retry-After`, non-retryable 401, malformed JSON on a 200, error payloads served with HTTP 200, JSON that is not an object, empty `choices`, malformed tool arguments, unknown tool names, path-escape refusal, the step cap, and budget cut-off. What remains unverified is *model inference itself*. The live test is `tests/integration/test_real_adapters.py::TestOpenAIToolsAdapterLive` and **skips** without `AGENTBENCH_OPENAI_API_KEY`. |
+| **`openai_tools` against a live model** | **Verified with local models.** A local model (`ornith-1.5:9b`) edited code in the sandbox and was graded `solved` on hidden tests, with full request/response, tool and usage evidence (see "First live-model solve"). No hosted provider has been tried, and 3 runs per model say nothing about relative model quality. The adapter's provider contract is now exercised end to end against a real local HTTP server (38 tests): retries, 429 with `Retry-After`, non-retryable 401, malformed JSON on a 200, error payloads served with HTTP 200, JSON that is not an object, empty `choices`, malformed tool arguments, unknown tool names, path-escape refusal, the step cap, and budget cut-off. What remains unverified is *model inference itself*. The live test is `tests/integration/test_real_adapters.py::TestOpenAIToolsAdapterLive` and **skips** without `AGENTBENCH_OPENAI_API_KEY`. |
 | Multi-host / multi-worker at scale | **Not exercised.** Single-host crash recovery is now tested by killing a real worker process; lease races are unit-tested. Nothing has been run across two machines. |
 | VM-level sandbox isolation | **Not implemented.** `sandbox/base.Sandbox` is the extension point; only `docker` and the explicitly unsafe `local_unsafe` exist. |
 | Model-assisted judging | **Not implemented.** The structure exists and reports `available: false`; it can never affect the deterministic verdict. |
@@ -487,7 +623,7 @@ backend/
     db/ schemas/ registry/ sandbox/ adapters/
     trajectory/ grading/ orchestrator/ metrics/ api/ cli/
   alembic/            # migrations (applies clean, no drift, reversible)
-  tests/              # 337 tests; fixtures/minirepo is a self-contained repo
+  tests/              # 462 tests (unit + integration); fixtures/minirepo is a self-contained repo
 benchmarks/
   textkit/            # sample repository (MIT, written for this project)
   acceptance/textkit/ # hidden grading tests — outside the repo by design

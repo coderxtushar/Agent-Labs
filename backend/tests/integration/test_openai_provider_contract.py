@@ -297,6 +297,44 @@ class TestHappyPath:
         assert "calc.add returns left - right" in prompt
         assert "Change the minus sign" not in prompt
 
+    def test_finished_explicitly_is_true_only_when_finish_is_called(
+        self, db: Session, seeded_task: Any, provider_factory: Any, with_key: None
+    ) -> None:
+        _, base_url = provider_factory(
+            [{"json": chat_response(tool_calls=[tool_call("finish", {"summary": "done"})])}]
+        )
+        run = run_with_provider(db, seeded_task.key, base_url, name="prov-finish-flag")
+        end = next(
+            e for e in read_events(db, run.id, limit=500) if e.event_type == EventType.AGENT_END
+        )
+        assert end.payload["finished_explicitly"] is True
+
+    def test_a_model_that_writes_a_tool_call_as_text_did_not_finish_explicitly(
+        self, db: Session, seeded_task: Any, provider_factory: Any, with_key: None
+    ) -> None:
+        # Observed live with qwen2.5-coder on Ollama: the call arrives as message text,
+        # not as `tool_calls`. The harness must not parse it, and must not record the
+        # stop as an explicit finish.
+        text_call = '{"name": "read_file", "arguments": {"path": "calc.py"}}'
+        _, base_url = provider_factory(
+            [
+                {
+                    "json": chat_response(
+                        content=text_call, usage={"prompt_tokens": 790, "completion_tokens": 22}
+                    )
+                }
+            ]
+        )
+        run = run_with_provider(db, seeded_task.key, base_url, name="prov-text-call")
+        events = read_events(db, run.id, limit=500)
+        end = next(e for e in events if e.event_type == EventType.AGENT_END)
+
+        assert run.outcome == RunOutcome.UNSOLVED
+        assert not run.patch
+        assert EventType.TOOL_CALL not in [e.event_type for e in events]
+        assert end.payload["finished_explicitly"] is False
+        assert end.payload["usage"]["input_tokens"] == 790
+
     def test_tool_events_are_recorded_with_arguments_and_results(
         self, db: Session, seeded_task: Any, provider_factory: Any, with_key: None
     ) -> None:
@@ -362,6 +400,19 @@ class TestCredentialAndConfigValidation:
 
         with pytest.raises(AgentConfigError, match="model"):
             register(db, name="prov-nomodel", adapter="openai_tools", config={})
+
+    @pytest.mark.parametrize("value", [0, 9, 1801, "600", True, 60.5])
+    def test_an_out_of_range_request_timeout_is_rejected(self, db: Session, value: Any) -> None:
+        from agentbench.adapters.base import AgentConfigError
+        from agentbench.registry.agents import register_agent as register
+
+        with pytest.raises(AgentConfigError, match="request_timeout_s"):
+            register(
+                db,
+                name=f"prov-badtimeout-{value!r}",
+                adapter="openai_tools",
+                config={"model": "m", "request_timeout_s": value},
+            )
 
 
 class TestProviderErrors:
@@ -594,9 +645,64 @@ class TestBudgets:
             limits_override={"agent_timeout_s": 3},
         )
 
-        assert run.outcome in (RunOutcome.TIMEOUT, RunOutcome.AGENT_ERROR)
+        # Budget exhaustion is a timeout. Accepting AGENT_ERROR here previously hid a
+        # misattribution observed in a live run.
+        assert run.outcome == RunOutcome.TIMEOUT
         assert run.grading is None
         assert float(run.timings.get("agent_s", 0)) < 25
+
+    def test_the_configured_request_timeout_bounds_a_single_provider_call(
+        self, db: Session, seeded_task: Any, provider_factory: Any, with_key: None
+    ) -> None:
+        """With plenty of run budget left, a stalled call is cut at
+        `request_timeout_s` and reported as a provider failure, not a timeout."""
+        _, base_url = provider_factory([{"sleep": 30, "json": chat_response()}])
+
+        run = run_with_provider(
+            db,
+            seeded_task.key,
+            base_url,
+            name="prov-request-timeout",
+            config_extra={"request_retries": 0, "request_timeout_s": 10},
+            limits_override={"agent_timeout_s": 120},
+        )
+
+        assert run.outcome == RunOutcome.AGENT_ERROR
+        assert "ReadTimeout" in (run.termination_reason or "")
+        assert 9 <= float(run.timings.get("total_s", 0)) < 25
+
+    def test_budget_running_out_mid_run_is_a_timeout_and_keeps_spent_usage(
+        self, db: Session, seeded_task: Any, provider_factory: Any, with_key: None
+    ) -> None:
+        """Observed live (local 9B model): the agent works for most of its budget,
+        then the next provider call outlives what is left. That must be TIMEOUT
+        with the tokens already spent preserved, not AGENT_ERROR with none."""
+        _, base_url = provider_factory(
+            [
+                {
+                    "json": chat_response(
+                        tool_calls=[tool_call("read_file", {"path": "calc.py"})],
+                        usage={"prompt_tokens": 500, "completion_tokens": 40},
+                    )
+                },
+                {"sleep": 30, "json": chat_response()},
+            ]
+        )
+
+        run = run_with_provider(
+            db,
+            seeded_task.key,
+            base_url,
+            name="prov-midrun-budget",
+            config_extra={"request_retries": 2},
+            limits_override={"agent_timeout_s": 4},
+        )
+
+        assert run.outcome == RunOutcome.TIMEOUT
+        assert run.grading is None
+        assert run.usage is not None
+        assert run.usage["input_tokens"] == 500
+        assert "budget" in (run.termination_reason or "")
 
     def test_the_step_cap_stops_a_model_that_never_calls_finish(
         self, db: Session, seeded_task: Any, provider_factory: Any, with_key: None

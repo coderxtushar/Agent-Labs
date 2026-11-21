@@ -160,8 +160,10 @@ Stated plainly, because an undocumented gap is worse than a known one:
 * **Host-side `git clone`** is used for `kind: "git"` tasks. Cloning does not
   execute repository code and hooks are not installed for a fresh clone, but the
   clone itself runs on the host rather than in a sandbox.
-* **PostgreSQL is supported but not exercised** by the test suite; only SQLite
-  is covered.
+* **PostgreSQL is exercised against a real `postgres:16-alpine` container**
+  (`backend/tests/integration/test_backing_services.py`: migrations, no drift,
+  JSON round-trip, idempotency constraint, single-winner claims, full run). It is
+  validated on a single host only; multi-host worker contention is not tested.
 
 ## Before a shared or public deployment
 

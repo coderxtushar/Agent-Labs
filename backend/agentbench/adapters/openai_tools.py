@@ -60,6 +60,13 @@ MAX_READ_CHARS = 60_000
 MAX_TOOL_RESULT_CHARS = 20_000
 MAX_MESSAGES_BEFORE_COMPACTION = 60
 REQUEST_TIMEOUT_CEILING_S = 180.0
+
+
+class _BudgetExhausted(AgentAdapterError):
+    """The run's wall-clock deadline left no time for (another) provider request.
+    Caught inside the loop and reported as `timeout`, not `agent_error`."""
+
+
 RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504, 529}
 
 SYSTEM_PROMPT = """You are a software engineer working inside a sandboxed checkout of a repository.
@@ -169,6 +176,14 @@ class OpenAIToolsAdapter(AgentAdapter):
             "max_tokens": {"type": "integer", "default": 4096},
             "allow_run_command": {"type": "boolean", "default": True},
             "request_retries": {"type": "integer", "default": 3},
+            "request_timeout_s": {
+                "type": "integer",
+                "default": int(REQUEST_TIMEOUT_CEILING_S),
+                "description": (
+                    "Per-request read timeout, 10-1800 s; always clamped to the run's "
+                    "remaining budget. Raise it for slow local or reasoning models."
+                ),
+            },
         },
     )
 
@@ -178,6 +193,14 @@ class OpenAIToolsAdapter(AgentAdapter):
         retries = self.config.get("request_retries", 3)
         if not isinstance(retries, int) or retries < 0 or retries > 10:
             raise AgentConfigError("'request_retries' must be an integer between 0 and 10")
+        timeout = self.config.get("request_timeout_s", int(REQUEST_TIMEOUT_CEILING_S))
+        if (
+            not isinstance(timeout, int)
+            or isinstance(timeout, bool)
+            or timeout < 10
+            or timeout > 1800
+        ):
+            raise AgentConfigError("'request_timeout_s' must be an integer between 10 and 1800")
 
     @classmethod
     def readiness(cls, config: dict[str, Any] | None = None) -> ReadinessReport:
@@ -221,6 +244,9 @@ class OpenAIToolsAdapter(AgentAdapter):
         steps = 0
         compactions = 0
         finished_summary: str | None = None
+        # True only when the model invoked the `finish` tool; a model that simply
+        # stops emitting tool calls has a summary but did not finish explicitly.
+        called_finish = False
 
         ctx.events.record(
             EventType.AGENT_START,
@@ -248,7 +274,7 @@ class OpenAIToolsAdapter(AgentAdapter):
                 if ctx.is_cancelled():
                     return self._cancelled_result(steps)
                 if ctx.expired:
-                    return self._timeout_result(steps)
+                    return self._budget_exhausted(steps, usage, model, base_url)
 
                 if len(messages) > MAX_MESSAGES_BEFORE_COMPACTION:
                     messages, dropped = _compact(messages)
@@ -263,9 +289,12 @@ class OpenAIToolsAdapter(AgentAdapter):
                         },
                     )
 
-                response, call_usage = self._chat(
-                    client, base_url, api_key, model, messages, tools, ctx
-                )
+                try:
+                    response, call_usage = self._chat(
+                        client, base_url, api_key, model, messages, tools, ctx
+                    )
+                except _BudgetExhausted as exc:
+                    return self._budget_exhausted(steps, usage, model, base_url, str(exc))
                 usage = _merge_usage(usage, call_usage)
 
                 assistant_text, tool_calls, finish_reason = _extract_turn(response)
@@ -321,6 +350,7 @@ class OpenAIToolsAdapter(AgentAdapter):
                     )
 
                     if name == "finish":
+                        called_finish = True
                         finished_summary = str(args.get("summary", ""))[:4000]
                         ctx.events.record(
                             EventType.TOOL_RESULT,
@@ -362,7 +392,7 @@ class OpenAIToolsAdapter(AgentAdapter):
             {
                 "steps": steps,
                 "compactions": compactions,
-                "finished_explicitly": finished_summary is not None,
+                "finished_explicitly": called_finish,
                 "hit_step_cap": reached_cap,
                 "usage": usage.to_dict(),
             },
@@ -383,9 +413,31 @@ class OpenAIToolsAdapter(AgentAdapter):
             provider=base_url,
             metadata={
                 "compactions": compactions,
-                "finished_explicitly": finished_summary is not None,
+                "finished_explicitly": called_finish,
                 "hit_step_cap": reached_cap,
             },
+        )
+
+    def _budget_exhausted(
+        self,
+        steps: int,
+        usage: TokenUsage,
+        model: str,
+        base_url: str,
+        detail: str = "",
+    ) -> AgentRunResult:
+        """Budget exhaustion is a `timeout`, never an `agent_error`, and the usage
+        already spent stays on the record."""
+        cost, cost_source = _cost_for(model, usage)
+        return AgentRunResult(
+            status=AgentStatus.TIMEOUT,
+            reason=detail or "the agent exceeded its wall-clock budget",
+            steps=steps,
+            usage=usage,
+            cost_usd=cost,
+            cost_source=cost_source,
+            model=model,
+            provider=base_url,
         )
 
     # -- provider ----------------------------------------------------------
@@ -418,9 +470,13 @@ class OpenAIToolsAdapter(AgentAdapter):
         for attempt in range(retries + 1):
             if ctx.is_cancelled():
                 raise AgentAdapterError("cancelled while contacting the model provider")
-            budget = min(ctx.seconds_remaining, REQUEST_TIMEOUT_CEILING_S)
+            request_timeout = float(self.config.get("request_timeout_s", REQUEST_TIMEOUT_CEILING_S))
+            budget = min(ctx.seconds_remaining, request_timeout)
             if budget <= 1:
-                raise AgentAdapterError("no time budget left to contact the model provider")
+                raise _BudgetExhausted(
+                    "the agent's wall-clock budget ran out while contacting the model provider"
+                    + (f" (last error: {last_error})" if last_error else "")
+                )
 
             ctx.events.record(
                 EventType.MODEL_REQUEST,
@@ -477,6 +533,15 @@ class OpenAIToolsAdapter(AgentAdapter):
                             f"model provider rejected the request: {last_error}"
                         )
                     retry_after = _retry_after_seconds(response)
+
+            if ctx.seconds_remaining <= 1:
+                # The attempt failed because (or while) the deadline ran out: the
+                # request timeout is clamped to the remaining budget, so a slow
+                # provider surfaces here. That is budget exhaustion, not an outage.
+                raise _BudgetExhausted(
+                    "the agent's wall-clock budget ran out while waiting for the model "
+                    f"provider (last error: {last_error})"
+                )
 
             if attempt < retries:
                 # Honour Retry-After when the provider sends one; it is the only

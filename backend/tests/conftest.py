@@ -32,12 +32,16 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 @pytest.fixture(autouse=True)
 def _isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Point every test at its own database, data dir and benchmarks root."""
-    from agentbench.config import reset_settings_cache
+    from agentbench.config import Settings, reset_settings_cache
     from agentbench.db.session import reset_engine
 
     for key in list(os.environ):
         if key.startswith("AGENTBENCH_"):
             monkeypatch.delenv(key, raising=False)
+    # A developer's repo-root or backend `.env` (e.g. holding a provider key for a
+    # live run) must not leak into tests: settings would otherwise see credentials
+    # the test did not set, flipping readiness and provenance assertions.
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
 
     monkeypatch.setenv("AGENTBENCH_DATABASE_URL", f"sqlite:///{tmp_path / 'test.db'}")
     monkeypatch.setenv("AGENTBENCH_DATA_DIR", str(tmp_path / "data"))

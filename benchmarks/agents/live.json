@@ -1,0 +1,45 @@
+{
+  "agents": [
+    {
+      "name": "qwen2.5-coder-7b-local",
+      "version": "1.0",
+      "adapter": "openai_tools",
+      "model": "qwen2.5-coder-7b-32k",
+      "description": "Local Ollama qwen2.5-coder:7b (Q4, num_ctx 32768) on Apple M1 Pro. Emits tool calls as plain text under Ollama, so it never edits code; kept for the recorded baseline.",
+      "config": {
+        "model": "qwen2.5-coder-7b-32k",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "max_tokens": 4096,
+        "request_retries": 3
+      }
+    },
+    {
+      "name": "ornith-1.5-9b-local",
+      "version": "1.1",
+      "adapter": "openai_tools",
+      "model": "ornith-1.5-9b-32k",
+      "description": "Local Ollama ornith-1.5:9b (Q4_K_M, num_ctx 32768) on Apple M1 Pro. v1.1 raises the per-request timeout for slow local reasoning; v1.0 used the 180 s default.",
+      "config": {
+        "model": "ornith-1.5-9b-32k",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "max_tokens": 8192,
+        "request_retries": 2,
+        "request_timeout_s": 900
+      }
+    },
+    {
+      "name": "bonsai-2-27b-local",
+      "version": "1.0",
+      "adapter": "openai_tools",
+      "model": "bonsai-2-27b-32k",
+      "description": "Local Ollama bonsai-2:27b (26.9B, ternary Q2_0, qwen35 architecture, num_ctx 32768) on Apple M1 Pro. Largest model that fits 16 GB.",
+      "config": {
+        "model": "bonsai-2-27b-32k",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "max_tokens": 8192,
+        "request_retries": 2,
+        "request_timeout_s": 900
+      }
+    }
+  ]
+}

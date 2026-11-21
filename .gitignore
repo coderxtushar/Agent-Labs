@@ -1,7 +1,39 @@
+# --- AI assistant files (kept private on purpose) -------------------------
 .cursor
 .claude
 .kiro
 .omo
-.env
 claude.md
 context.md
+.playwright-mcp/
+
+# --- secrets ---------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+
+# --- runtime data: database, run workspaces, artifacts, exports ------------
+# Regenerate with `agentbench bootstrap` + experiments; never commit run state.
+data/
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# --- frontend (see also frontend/.gitignore) -------------------------------
+node_modules/
+frontend/dist/
+
+# --- OS / editor -----------------------------------------------------------
+.DS_Store
+*.swp
