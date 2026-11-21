@@ -27,6 +27,115 @@
       }
     },
     {
+      "name": "reference-solution",
+      "version": "1.1",
+      "adapter": "scripted",
+      "description": "Deterministic known-good agent. Applies the bundled reference solutions for all fourteen textkit tasks. Not a model: it exists to prove the pipeline can award SOLVED when a correct patch is produced, and to anchor comparisons. Version 1.0 covers only the original three tasks.",
+      "config": {
+        "on_unknown_task": "noop",
+        "tasks": {
+          "textkit-slugify-collapse": {
+            "files": {
+              "src/textkit/slug.py": {
+                "$file": "solutions/textkit/slug.py"
+              }
+            }
+          },
+          "textkit-wordwrap": {
+            "files": {
+              "src/textkit/wrap.py": {
+                "$file": "solutions/textkit/wrap.py"
+              }
+            }
+          },
+          "textkit-truncate-boundary": {
+            "files": {
+              "src/textkit/truncate.py": {
+                "$file": "solutions/textkit/truncate.py"
+              }
+            }
+          },
+          "textkit-snake-case-acronyms": {
+            "files": {
+              "src/textkit/case.py": {
+                "$file": "solutions/textkit/case.py"
+              }
+            }
+          },
+          "textkit-word-count-whitespace": {
+            "files": {
+              "src/textkit/stats.py": {
+                "$file": "solutions/textkit/stats.py"
+              }
+            }
+          },
+          "textkit-strip-accents-unicode": {
+            "files": {
+              "src/textkit/accents.py": {
+                "$file": "solutions/textkit/accents.py"
+              }
+            }
+          },
+          "textkit-dedupe-iterables": {
+            "files": {
+              "src/textkit/dedupe.py": {
+                "$file": "solutions/textkit/dedupe.py"
+              }
+            }
+          },
+          "textkit-parse-pairs-errors": {
+            "files": {
+              "src/textkit/pairs.py": {
+                "$file": "solutions/textkit/pairs.py"
+              }
+            }
+          },
+          "textkit-indent-skip-blank": {
+            "files": {
+              "src/textkit/indent.py": {
+                "$file": "solutions/textkit/indent.py"
+              }
+            }
+          },
+          "textkit-ordinal": {
+            "files": {
+              "src/textkit/numbers.py": {
+                "$file": "solutions/textkit/numbers.py"
+              }
+            }
+          },
+          "textkit-split-fields-quoted": {
+            "files": {
+              "src/textkit/fields.py": {
+                "$file": "solutions/textkit/fields.py"
+              }
+            }
+          },
+          "textkit-display-width-unicode": {
+            "files": {
+              "src/textkit/width.py": {
+                "$file": "solutions/textkit/width.py"
+              }
+            }
+          },
+          "textkit-line-range-inclusive": {
+            "files": {
+              "src/textkit/lines.py": {
+                "$file": "solutions/textkit/lines.py"
+              }
+            }
+          },
+          "textkit-chunked-lazy": {
+            "files": {
+              "src/textkit/chunks.py": {
+                "$file": "solutions/textkit/chunks.py"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "partial-solution",
       "version": "1.0",
       "adapter": "scripted",

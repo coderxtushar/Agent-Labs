@@ -37,10 +37,17 @@ from agentbench.db.models import (
     ExperimentRecord,
     FailureAnnotationRecord,
     GradingResultRecord,
+    RunEventRecord,
     RunRecord,
 )
 from agentbench.schemas import provenance as provenance_module
-from agentbench.schemas.enums import ExperimentState, FailureCategory, RunOutcome, RunState
+from agentbench.schemas.enums import (
+    EventType,
+    ExperimentState,
+    FailureCategory,
+    RunOutcome,
+    RunState,
+)
 
 PASS_AT_K_ESTIMATOR = "unbiased (Chen et al. 2021): 1 - C(n-c, k) / C(n, k)"
 CI_METHOD = "Wilson score interval, 95%"
@@ -476,6 +483,12 @@ def experiment_metrics(session: Session, experiment_id: str) -> ExperimentMetric
     metrics.cost_usd_total = round(cost_total, 6) if saw_cost else None
 
     metrics.warnings.extend(_warnings_for(metrics, experiment))
+    constrained = _host_constrained_runs(session, [run.id for run in runs])
+    if constrained:
+        metrics.warnings.append(
+            f"{constrained} run(s) ran while the host was swapping or under memory pressure; "
+            "their timings may be inflated (see each run's host resources)"
+        )
     return metrics
 
 
@@ -497,6 +510,18 @@ def _group(tasks: list[TaskMetrics], key: Any) -> dict[str, dict[str, Any]]:
             "regressions": sum(t.regressions for t in group),
         }
     return out
+
+
+def _host_constrained_runs(session: Session, run_ids: list[str]) -> int:
+    if not run_ids:
+        return 0
+    payloads = session.execute(
+        select(RunEventRecord.payload).where(
+            RunEventRecord.run_id.in_(run_ids),
+            RunEventRecord.event_type == EventType.RESOURCE_SUMMARY,
+        )
+    ).scalars()
+    return sum(1 for p in payloads if isinstance(p, dict) and p.get("host_constrained"))
 
 
 def _warnings_for(metrics: ExperimentMetrics, experiment: ExperimentRecord) -> list[str]:

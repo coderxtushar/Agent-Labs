@@ -348,3 +348,61 @@
     transform: none;
   }
 }
+
+/* ------------------------------------------------------------------------- */
+/* GitHub launch: backdrop fades in, the mark settles, rings ripple out, then */
+/* the mark zooms through before the browser navigates (~950 ms).            */
+/* ------------------------------------------------------------------------- */
+.gh-launch {
+  background: rgb(var(--bg) / 0.92);
+  backdrop-filter: blur(10px);
+  animation: gh-backdrop 260ms ease-out both;
+}
+.gh-mark {
+  display: inline-flex;
+  animation: gh-mark 950ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+.gh-ring {
+  animation: gh-ring 900ms cubic-bezier(0.2, 0.7, 0.2, 1) 120ms both;
+}
+.gh-ring-2 {
+  animation-delay: 260ms;
+}
+.gh-caption {
+  animation: enter-up 420ms cubic-bezier(0.2, 0.7, 0.2, 1) 120ms both;
+}
+@keyframes gh-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes gh-mark {
+  0% {
+    transform: scale(0.55) rotate(-18deg);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.06) rotate(4deg);
+    opacity: 1;
+  }
+  55% {
+    transform: scale(1) rotate(0deg);
+  }
+  100% {
+    transform: scale(7);
+    opacity: 0;
+  }
+}
+@keyframes gh-ring {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}

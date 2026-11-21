@@ -62,12 +62,24 @@ def real_benchmarks(monkeypatch: pytest.MonkeyPatch) -> Path:
     return REAL_BENCHMARKS
 
 
+#: The pipeline tests below hard-code agents and counts for these three tasks;
+#: the rest of the bundled suite is covered by the validation test.
+CORE_TASK_IDS = ("textkit-slugify-collapse", "textkit-wordwrap", "textkit-truncate-boundary")
+
+
 @pytest.fixture
-def textkit(db: Session, real_benchmarks: Path) -> list[Any]:
+def bundled(db: Session, real_benchmarks: Path) -> list[Any]:
     benchmark = load_benchmark_file(real_benchmarks / "tasks" / "textkit.json")
     import_benchmark(db, benchmark)
     db.commit()
-    rows, _ = list_tasks(db, limit=50, benchmark_id="textkit")
+    rows, total = list_tasks(db, limit=500, benchmark_id="textkit")
+    assert total == len(benchmark.tasks)
+    return rows
+
+
+@pytest.fixture
+def textkit(bundled: list[Any]) -> list[Any]:
+    rows = [record for record in bundled if record.task_id in CORE_TASK_IDS]
     assert len(rows) == 3
     return rows
 
@@ -91,7 +103,7 @@ def run_experiment(db: Session, name: str, agent_id: str, task_keys: list[str]) 
 # --------------------------------------------------------------------------- #
 class TestBundledBenchmarkValidation:
     def test_every_bundled_task_validates_in_a_real_container(
-        self, db: Session, textkit: list[Any], real_benchmarks: Path
+        self, db: Session, bundled: list[Any], real_benchmarks: Path
     ) -> None:
         """Checks the shipped benchmark is executable AND falsifiable: the
         target tests must fail before a fix, and the regression guards must
@@ -99,7 +111,7 @@ class TestBundledBenchmarkValidation:
         from agentbench.registry.service import set_validation_result, spec_of
         from agentbench.registry.validator import validate_task
 
-        for record in textkit:
+        for record in bundled:
             report = validate_task(spec_of(record))
             set_validation_result(db, record, report.status, report.to_dict())
 

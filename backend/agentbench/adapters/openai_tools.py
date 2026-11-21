@@ -338,6 +338,10 @@ class OpenAIToolsAdapter(AgentAdapter):
                     name = tool_call.get("function", {}).get("name", "")
                     raw_args = tool_call.get("function", {}).get("arguments") or "{}"
                     tool_output: str | None = None
+                    # One id ties this call to its result in the trajectory, so the UI
+                    # pairs them exactly rather than by event order. The provider's id
+                    # is used when it sent one; otherwise a per-run step id.
+                    call_id = str(tool_call.get("id") or f"call_{steps}")[:120]
                     try:
                         args = json.loads(raw_args) if isinstance(raw_args, str) else dict(raw_args)
                     except json.JSONDecodeError as exc:
@@ -346,7 +350,12 @@ class OpenAIToolsAdapter(AgentAdapter):
 
                     ctx.events.record(
                         EventType.TOOL_CALL,
-                        {"tool": name, "arguments": _trim_args(args), "step": steps},
+                        {
+                            "tool": name,
+                            "arguments": _trim_args(args),
+                            "step": steps,
+                            "call_id": call_id,
+                        },
                     )
 
                     if name == "finish":
@@ -354,7 +363,13 @@ class OpenAIToolsAdapter(AgentAdapter):
                         finished_summary = str(args.get("summary", ""))[:4000]
                         ctx.events.record(
                             EventType.TOOL_RESULT,
-                            {"tool": name, "ok": True, "summary": finished_summary},
+                            {
+                                "tool": name,
+                                "ok": True,
+                                "summary": finished_summary,
+                                "step": steps,
+                                "call_id": call_id,
+                            },
                         )
                         stop = True
                         break
@@ -365,7 +380,7 @@ class OpenAIToolsAdapter(AgentAdapter):
                     messages.append(
                         {
                             "role": "tool",
-                            "tool_call_id": tool_call.get("id", f"call_{steps}"),
+                            "tool_call_id": call_id,
                             "content": tool_output[:MAX_TOOL_RESULT_CHARS],
                         }
                     )
@@ -373,6 +388,8 @@ class OpenAIToolsAdapter(AgentAdapter):
                         EventType.TOOL_RESULT,
                         {
                             "tool": name,
+                            "step": steps,
+                            "call_id": call_id,
                             "ok": not tool_output.startswith("ERROR:"),
                             "result_chars": len(tool_output),
                             "result_preview": tool_output[:2000],

@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 
 import { useOverview } from "../api/hooks";
 import { OutcomeStack, RateBar } from "../components/charts";
+import { GitHubLink, GitHubMark } from "../components/GitHubLink";
 import { Logo } from "../components/Layout";
 import { Badge, cx } from "../components/ui";
 
@@ -168,7 +169,11 @@ function TopNav() {
             </a>
           ))}
         </nav>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <GitHubLink className="muted hairline press inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium hover:border-[rgb(var(--border-strong))] hover:text-[rgb(var(--text))]">
+            <GitHubMark className="h-4 w-4 transition-transform duration-300 group-hover:rotate-[-8deg] group-hover:scale-110" />
+            <span className="hidden sm:inline">GitHub</span>
+          </GitHubLink>
           <PrimaryButton to="/overview" className="px-3.5 py-2 text-[13px]">
             Open the lab
           </PrimaryButton>
@@ -606,6 +611,7 @@ const FEATURE_GROUPS: { group: string; items: { to: string; title: string; body:
       { to: "/trajectories", title: "Trajectories", body: "Every recorded event of a run, a raw JSON view, and a patch viewer that separates generated from validated." },
       { to: "/failures", title: "Failures", body: "Timeouts, wrong patches, regressions, tool errors and tampering, classified only where the evidence holds." },
       { to: "/analytics", title: "Analytics", body: "Activity over time, success by category and difficulty, durations by outcome, token and tool usage." },
+      { to: "/published", title: "Published results", body: "Frontier models on public leaderboards with sources and intervals, kept apart from your own runs." },
     ],
   },
   {
@@ -762,8 +768,12 @@ function Close() {
         <p className="muted mx-auto mt-5 max-w-xl text-[16px] leading-relaxed">
           Run it, grade it with tests it never saw, and read the answer with the evidence attached.
         </p>
-        <div className="mt-9 flex justify-center">
+        <div className="mt-9 flex flex-wrap justify-center gap-3">
           <PrimaryButton to="/overview" className="px-5 py-3">Open the lab</PrimaryButton>
+          <GitHubLink className="surface-2 hairline press inline-flex items-center gap-2 rounded-lg border px-5 py-3 text-sm font-medium hover:border-[rgb(var(--border-strong))]">
+            <GitHubMark className="h-4 w-4 transition-transform duration-300 group-hover:rotate-[-8deg] group-hover:scale-110" />
+            Try it from GitHub
+          </GitHubLink>
         </div>
       </Container>
     </section>
@@ -779,7 +789,13 @@ function Footer() {
           <span className="text-[13px] font-semibold tracking-tight">Agent Labs</span>
           <span className="subtle text-2xs">Prove. Measure. Improve.</span>
         </div>
-        <p className="subtle text-2xs">Open source · MIT licensed · local-first</p>
+        <div className="flex items-center gap-4">
+          <p className="subtle text-2xs">Open source · MIT licensed · local-first</p>
+          <GitHubLink className="subtle inline-flex items-center gap-1.5 text-2xs hover:text-[rgb(var(--text))]">
+            <GitHubMark className="h-3.5 w-3.5" />
+            coderxtushar/Agent-Labs
+          </GitHubLink>
+        </div>
       </Container>
     </footer>
   );

@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { API_BASE_URL, downloadUrl } from "../api/client";
 import { useAnnotateRun, useCapabilities, useRun, useRunEvents, useRunPatch } from "../api/hooks";
-import type { Grading, GradingLayer, RunDetail as RunDetailData, RunEvent } from "../api/types";
+import type { Grading, GradingLayer, ResourceSummary, RunDetail as RunDetailData, RunEvent } from "../api/types";
 import {
   LayerBadge,
   OptionalNumber,
@@ -230,6 +230,8 @@ interface TrajectoryItem {
   result?: RunEvent;
   /** tool.result → the seq of the call it answers. */
   callSeq?: number;
+  /** How the pair was made: an exact recorded call id, or event order (older runs). */
+  pairedBy?: "id" | "order";
   /** model.response → seconds since the preceding model.request. */
   latency?: number | null;
 }
@@ -281,18 +283,38 @@ function buildTrajectory(events: RunEvent[]): { items: TrajectoryItem[]; summary
     return item;
   });
 
-  // Pair a tool.call with a tool.result of the same tool that follows it before
-  // any other tool.call or model.request. Anything less clear stays unpaired.
+  // Runs recorded since tool-call ids were added carry a `call_id` on both the
+  // call and its result: pair those exactly. Older runs have no ids, so fall back
+  // to pairing a tool.call with a tool.result of the same tool that follows it
+  // before any other tool.call or model.request. Anything less clear stays unpaired.
+  const callsById = new Map<string, number>();
   items.forEach((item, index) => {
-    if (item.event.event_type !== "tool.call") return;
+    const id = item.event.payload.call_id;
+    if (item.event.event_type === "tool.call" && typeof id === "string" && id) callsById.set(id, index);
+  });
+  items.forEach((item) => {
+    const id = item.event.payload.call_id;
+    if (item.event.event_type !== "tool.result" || typeof id !== "string" || !id) return;
+    const callIndex = callsById.get(id);
+    if (callIndex === undefined || items[callIndex].result) return;
+    items[callIndex].result = item.event;
+    items[callIndex].pairedBy = "id";
+    item.callSeq = items[callIndex].event.seq;
+    item.pairedBy = "id";
+  });
+  items.forEach((item, index) => {
+    if (item.event.event_type !== "tool.call" || item.result) return;
+    if (typeof item.event.payload.call_id === "string" && item.event.payload.call_id) return;
     const tool = str(item.event.payload.tool);
     for (let next = index + 1; next < items.length; next += 1) {
       const candidate = items[next].event;
       if (candidate.event_type === "tool.call" || candidate.event_type === "model.request") break;
       if (candidate.event_type === "tool.result") {
-        if (str(candidate.payload.tool) === tool && items[next].callSeq === undefined) {
+        if (str(candidate.payload.tool) === tool && items[next].callSeq === undefined && !candidate.payload.call_id) {
           item.result = candidate;
+          item.pairedBy = "order";
           items[next].callSeq = item.event.seq;
+          items[next].pairedBy = "order";
         }
         break;
       }
@@ -457,6 +479,17 @@ function summarise(event: RunEvent): string {
       ]);
     case "error":
       return join([str(p.message), str(p.detail) && firstLine(str(p.detail) as string, 90)]);
+    case "resource.summary": {
+      if (p.supported !== true) return `host memory not available: ${str(p.reason) ?? "unsupported"}`;
+      const memory = (p.memory ?? {}) as Record<string, unknown>;
+      const swap = (p.swap ?? {}) as Record<string, unknown>;
+      const growth = num(swap.growth_bytes);
+      return join([
+        `peak RAM ${num(memory.peak_used_percent) ?? "?"}%`,
+        growth !== null && `swap ${growth >= 0 ? "+" : ""}${Math.round(growth / 1024 / 1024)} MB`,
+        p.host_constrained === true ? "host constrained — timings may be inflated" : "host not constrained",
+      ]);
+    }
     case "patch.generated":
       return p.empty === true
         ? "no changes captured"
@@ -819,7 +852,9 @@ function EventDetails({ item }: { item: TrajectoryItem }) {
               </div>
             ) : (
               <p className="subtle text-2xs">
-                No tool.result for this call was recorded directly after it. Nothing is inferred.
+                {typeof item.event.payload.call_id === "string"
+                  ? `No tool.result with call id ${item.event.payload.call_id} was recorded. Nothing is inferred.`
+                  : "No tool.result for this call was recorded directly after it. Nothing is inferred."}
               </p>
             )}
           </Section>
@@ -837,7 +872,12 @@ function EventDetails({ item }: { item: TrajectoryItem }) {
               row("tool", str(p.tool) && <Mono>{str(p.tool)}</Mono>),
               row("ok", yesNo(p.ok)),
               row("chars", chars?.toLocaleString()),
-              row("answers", item.callSeq !== undefined ? `tool.call #${item.callSeq}` : "unpaired"),
+              row(
+                "answers",
+                item.callSeq !== undefined
+                  ? `tool.call #${item.callSeq} (${item.pairedBy === "id" ? "matched by call id" : "matched by event order"})`
+                  : "unpaired",
+              ),
             ]}
           />
           <Section label="Output preview">
@@ -1501,6 +1541,66 @@ function Tile({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function Sparkline({ values, tone }: { values: number[]; tone: string }) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const points = values
+    .map((value, index) => `${(index / (values.length - 1)) * 100},${28 - ((value - min) / span) * 26}`)
+    .join(" ");
+  return (
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="mt-2 h-7 w-full" aria-hidden>
+      <polyline points={points} fill="none" stroke={tone} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+function HostResourcesTile({ resources }: { resources: ResourceSummary | null | undefined }) {
+  if (!resources) {
+    return (
+      <Tile label="Host memory">
+        <p className="muted mt-1.5 text-2xs">not recorded — this run predates per-run sampling</p>
+      </Tile>
+    );
+  }
+  if (!resources.supported) {
+    return (
+      <Tile label="Host memory">
+        <p className="muted mt-1.5 text-2xs">not available: {resources.reason}</p>
+      </Tile>
+    );
+  }
+  const mb = (bytes: number | null) => (bytes === null ? "—" : `${Math.round(bytes / 1024 / 1024).toLocaleString()} MB`);
+  const growth = resources.swap.growth_bytes;
+  return (
+    <Tile label="Host memory">
+      <div className="mt-1.5 space-y-0.5 text-2xs" title={resources.note}>
+        <div className="flex justify-between gap-2">
+          <span className="muted">peak RAM</span>
+          <span className="tnum">{resources.memory.peak_used_percent}%</span>
+        </div>
+        <div className="flex justify-between gap-2">
+          <span className="muted">swap growth</span>
+          <span className={cx("tnum", growth !== null && growth > 0 && resources.host_constrained && "text-warn")}>
+            {growth === null ? "—" : `${growth >= 0 ? "+" : ""}${mb(growth)}`}
+          </span>
+        </div>
+        <div className="flex justify-between gap-2">
+          <span className="muted">pressure</span>
+          <span>{resources.pressure.worst ?? "not reported"}</span>
+        </div>
+      </div>
+      <Sparkline values={resources.series.map((point) => point[1])} tone={resources.host_constrained ? "rgb(var(--warn))" : "rgb(var(--accent))"} />
+      <p className={cx("mt-1 text-2xs", resources.host_constrained ? "text-warn" : "subtle")}>
+        {resources.host_constrained
+          ? `Host was constrained (${resources.reasons.join("; ")}); timings may be inflated.`
+          : `${resources.samples} samples every ${resources.interval_s}s; host not constrained.`}
+      </p>
+    </Tile>
+  );
+}
+
 const TAB_IDS = ["trajectory", "patch", "grading", "failure", "context"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
@@ -1623,7 +1723,7 @@ export default function RunDetail() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Tile label="Timings">
           <div className="mt-1.5 space-y-0.5 text-2xs">
             {Object.entries(data.timings).map(([phase, seconds]) => (
@@ -1670,6 +1770,8 @@ export default function RunDetail() {
           </p>
           <p className="muted mt-1 text-2xs">{data.cost_source ? `source: ${data.cost_source}` : "no cost reported"}</p>
         </Tile>
+
+        <HostResourcesTile resources={data.resources} />
       </div>
 
       <div className="space-y-4">

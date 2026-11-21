@@ -1,0 +1,18 @@
+"""Simple text statistics."""
+
+from __future__ import annotations
+
+
+def word_count(text: str) -> int:
+    """Return the number of words in ``text``.
+
+    A word is a maximal run of non-whitespace characters, where whitespace is
+    anything ``str.isspace`` accepts (including Unicode spaces).
+
+    Args:
+        text: Input text.
+
+    Returns:
+        The number of words.
+    """
+    return len(text.split())

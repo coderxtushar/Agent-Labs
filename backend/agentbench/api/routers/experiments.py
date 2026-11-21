@@ -15,7 +15,7 @@ from agentbench.api.schemas import (
     serialize_experiment,
     serialize_run,
 )
-from agentbench.db.models import ExperimentRecord, RunRecord
+from agentbench.db.models import AgentConfigRecord, ExperimentRecord, RunRecord
 from agentbench.metrics.compute import experiment_metrics
 from agentbench.metrics.export import render_report
 from agentbench.orchestrator import experiment as service
@@ -24,7 +24,14 @@ from agentbench.orchestrator.worker import get_worker
 router = APIRouter(prefix="/experiments", tags=["experiments"])
 
 
-@router.get("", summary="List experiments")
+_SORTS = {
+    "newest": ExperimentRecord.created_at.desc(),
+    "oldest": ExperimentRecord.created_at.asc(),
+    "name": func.lower(ExperimentRecord.name).asc(),
+}
+
+
+@router.get("", summary="List experiments (server-side search, filter and sort)")
 def list_endpoint(
     session: DbSession,
     page: Pagination,
@@ -32,19 +39,40 @@ def list_endpoint(
     benchmark_id: Annotated[str | None, Query()] = None,
     agent_config_id: Annotated[str | None, Query()] = None,
     include_simulated: Annotated[bool, Query()] = True,
+    search: Annotated[
+        str | None,
+        Query(max_length=200, description="matches name, description, benchmark, agent or model"),
+    ] = None,
+    sort: Annotated[str, Query(pattern="^(newest|oldest|name)$")] = "newest",
 ) -> dict[str, Any]:
-    stmt = select(ExperimentRecord).order_by(ExperimentRecord.created_at.desc())
+    stmt = select(ExperimentRecord).order_by(_SORTS[sort], ExperimentRecord.id.asc())
     if state:
         stmt = stmt.where(ExperimentRecord.state == state)
     if benchmark_id:
         stmt = stmt.where(ExperimentRecord.benchmark_id == benchmark_id)
     if agent_config_id:
         stmt = stmt.where(ExperimentRecord.agent_config_id == agent_config_id)
+    needle = (search or "").strip().lower()
+    if needle or not include_simulated:
+        stmt = stmt.outerjoin(
+            AgentConfigRecord, AgentConfigRecord.id == ExperimentRecord.agent_config_id
+        )
+    if needle:
+        pattern = f"%{needle}%"
+        stmt = stmt.where(
+            func.lower(ExperimentRecord.name).like(pattern)
+            | func.lower(ExperimentRecord.description).like(pattern)
+            | func.lower(ExperimentRecord.benchmark_id).like(pattern)
+            | func.lower(ExperimentRecord.id).like(pattern)
+            | func.lower(func.coalesce(AgentConfigRecord.name, "")).like(pattern)
+            | func.lower(func.coalesce(AgentConfigRecord.model, "")).like(pattern)
+        )
+    if not include_simulated:
+        # In SQL, not after paging, so the page size and the total stay correct.
+        stmt = stmt.where(AgentConfigRecord.is_simulated.is_(False))
 
     total = int(session.execute(select(func.count()).select_from(stmt.subquery())).scalar() or 0)
-    rows = list(session.execute(stmt.limit(page.limit).offset(page.offset)).scalars())
-    if not include_simulated:
-        rows = [r for r in rows if not (r.agent_snapshot or {}).get("is_simulated")]
+    rows = list(session.execute(stmt.limit(page.limit).offset(page.offset)).unique().scalars())
 
     items = []
     for record in rows:

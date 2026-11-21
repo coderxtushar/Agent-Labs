@@ -12,6 +12,7 @@ const CompareStudio = lazy(() => import("./screens/CompareStudio"));
 const ExperimentDetail = lazy(() => import("./screens/ExperimentDetail"));
 const Experiments = lazy(() => import("./screens/Experiments"));
 const Failures = lazy(() => import("./screens/Failures"));
+const PublishedResults = lazy(() => import("./screens/PublishedResults"));
 const Leaderboard = lazy(() => import("./screens/Leaderboard"));
 const LocalModels = lazy(() => import("./screens/LocalModels"));
 const ModelProfile = lazy(() => import("./screens/ModelProfile"));
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
       { path: "runs/:runId", element: page(<RunDetail />) },
       { path: "failures", element: page(<Failures />) },
       { path: "analytics", element: page(<Analytics />) },
+      { path: "published", element: page(<PublishedResults />) },
       // system
       { path: "models", element: page(<LocalModels />) },
       { path: "agents", element: page(<Agents />) },

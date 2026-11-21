@@ -8,12 +8,13 @@ from fastapi import APIRouter, Query
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select
 
-from agentbench.api.deps import DbSession, Pagination, bad_request, not_found
+from agentbench.api.deps import AppSettings, DbSession, Pagination, bad_request, not_found
 from agentbench.api.schemas import serialize_annotation, serialize_run
 from agentbench.db.models import ExperimentRecord, FailureAnnotationRecord, RunRecord
 from agentbench.metrics.compare import compare_experiments
 from agentbench.metrics.compute import platform_overview
 from agentbench.metrics.export import comparison_markdown
+from agentbench.metrics.external import published_results
 from agentbench.metrics.insights import (
     MAX_COMPARE_ARMS,
     analytics,
@@ -51,6 +52,14 @@ def leaderboard_endpoint(
         experiment_ids=_id_list(experiment_ids) or None,
         include_non_model=include_non_model,
     )
+
+
+@router.get(
+    "/published-results",
+    summary="Third-party published benchmark scores (not run in Agent Labs), with sources",
+)
+def published_results_endpoint(settings: AppSettings) -> dict[str, Any]:
+    return published_results(settings.benchmarks_dir / "external")
 
 
 @router.get("/analytics", summary="Platform-wide activity, tool usage and runtime analytics")
@@ -117,32 +126,40 @@ def failures_endpoint(
     session: DbSession,
     page: Pagination,
     experiment_id: Annotated[str | None, Query()] = None,
-    category: Annotated[str | None, Query()] = None,
+    category: Annotated[
+        str | None,
+        Query(description="one category, or several separated by commas (any of them)"),
+    ] = None,
     task_id: Annotated[str | None, Query()] = None,
     source: Annotated[str | None, Query()] = None,
     search: Annotated[str | None, Query(max_length=200)] = None,
 ) -> dict[str, Any]:
-    stmt = (
+    def scoped(stmt: Any) -> Any:
+        """Every filter except category, shared by the list and the distribution."""
+        stmt = stmt.where(FailureAnnotationRecord.superseded.is_(False))
+        if experiment_id:
+            stmt = stmt.where(RunRecord.experiment_id == experiment_id)
+        if task_id:
+            stmt = stmt.where(RunRecord.task_id == task_id)
+        if source:
+            stmt = stmt.where(FailureAnnotationRecord.source == source)
+        if search:
+            pattern = f"%{search.lower()}%"
+            stmt = stmt.where(
+                func.lower(FailureAnnotationRecord.rationale).like(pattern)
+                | func.lower(RunRecord.task_id).like(pattern)
+                | func.lower(func.coalesce(RunRecord.termination_reason, "")).like(pattern)
+            )
+        return stmt
+
+    categories = [part.strip() for part in (category or "").split(",") if part.strip()]
+    stmt = scoped(
         select(FailureAnnotationRecord, RunRecord)
         .join(RunRecord, RunRecord.id == FailureAnnotationRecord.run_id)
-        .where(FailureAnnotationRecord.superseded.is_(False))
         .order_by(FailureAnnotationRecord.created_at.desc())
     )
-    if experiment_id:
-        stmt = stmt.where(RunRecord.experiment_id == experiment_id)
-    if category:
-        stmt = stmt.where(FailureAnnotationRecord.category == category)
-    if task_id:
-        stmt = stmt.where(RunRecord.task_id == task_id)
-    if source:
-        stmt = stmt.where(FailureAnnotationRecord.source == source)
-    if search:
-        pattern = f"%{search.lower()}%"
-        stmt = stmt.where(
-            func.lower(FailureAnnotationRecord.rationale).like(pattern)
-            | func.lower(RunRecord.task_id).like(pattern)
-            | func.lower(func.coalesce(RunRecord.termination_reason, "")).like(pattern)
-        )
+    if categories:
+        stmt = stmt.where(FailureAnnotationRecord.category.in_(categories))
 
     total = int(session.execute(select(func.count()).select_from(stmt.subquery())).scalar() or 0)
     rows = session.execute(stmt.limit(page.limit).offset(page.offset)).all()
@@ -156,19 +173,21 @@ def failures_endpoint(
         for annotation, run in rows
     ]
 
-    distribution_stmt = (
+    # The distribution ignores the category filter on purpose: it is what the
+    # bucket cards show, and each bucket must keep its count when one is selected.
+    distribution_stmt = scoped(
         select(FailureAnnotationRecord.category, func.count(FailureAnnotationRecord.id))
         .join(RunRecord, RunRecord.id == FailureAnnotationRecord.run_id)
-        .where(FailureAnnotationRecord.superseded.is_(False))
         .group_by(FailureAnnotationRecord.category)
     )
-    if experiment_id:
-        distribution_stmt = distribution_stmt.where(RunRecord.experiment_id == experiment_id)
 
     envelope = page.envelope(items, total)
     envelope["distribution"] = {
         name: int(count or 0) for name, count in session.execute(distribution_stmt).all()
     }
+    envelope["distribution_scope"] = (
+        "all filters except category (experiment, task, source and search apply)"
+    )
     return envelope
 
 

@@ -89,6 +89,7 @@ simulated pipeline checks are labelled and kept out of model headline numbers.
 | **Trajectories** | Every run, and for each run an ordered timeline of recorded events (model requests/responses with token usage, tool calls paired with their results, commands, file reads/writes, retries, errors, grading layers), a raw JSON view, and a patch viewer that separates *generated* from *validated*. |
 | **Failures** | Failure buckets (timeouts, incorrect patches, regressions, tool errors, infrastructure, test tampering, grading errors, other) with raw categories visible; unclassified failures stay "unclassified". Drill down to runs. |
 | **Analytics** | Daily activity, success by provenance / category / difficulty, duration by outcome, token usage, tool-call failure rates. |
+| **Published results** | Frontier coding models from a public leaderboard (SWE-bench Verified, Vals AI, published 2026-09-01), each score with a 95% interval Agent Labs derives from the 500 tasks, so statistical ties are visible (8 models tie for first). Labelled "not run in Agent Labs", compared only within one harness, never mixed with your own results. Data lives in `benchmarks/external/` with its source URL and dates. |
 | **Local Models** | Installed and loaded Ollama models, their size, quantization and context, the agent configs that use them, and those configs' results. Read-only: commands to pull/remove/stop are copy-only. |
 | **System Monitor** | RAM, swap, CPU, load, memory pressure, Docker daemon and live sandbox-container stats, Ollama, active runs. Unsupported metrics are labelled, not estimated. |
 
@@ -227,19 +228,34 @@ appended as superseding rows; raw evidence is never mutated.
 ## The bundled benchmark
 
 `benchmarks/textkit` is a small MIT-licensed Python library **written for this
-project**, with three deliberate defects and three tasks over them:
+project**, with deliberate defects and gaps and fourteen tasks over them. Each
+task is confined to its own module, so solving one never changes another's
+outcome:
 
-| Task | Category | What it tests |
-| --- | --- | --- |
-| `textkit-slugify-collapse` | bug_fix | Runs of punctuation produce repeated/dangling separators |
-| `textkit-wordwrap` | feature | `wrap_text` is declared but raises `NotImplementedError` |
-| `textkit-truncate-boundary` | regression_fix | `truncate` exceeds its limit; the obvious fix breaks an existing test |
+| Task | Category | Difficulty | What it tests |
+| --- | --- | --- | --- |
+| `textkit-slugify-collapse` | bug_fix | easy | Runs of punctuation produce repeated/dangling separators |
+| `textkit-wordwrap` | feature | medium | `wrap_text` is declared but raises `NotImplementedError` |
+| `textkit-truncate-boundary` | regression_fix | medium | `truncate` exceeds its limit; the obvious fix breaks an existing test |
+| `textkit-snake-case-acronyms` | bug_fix | medium | `snake_case` shreds acronyms (`HTTPServer` -> `h_t_t_p_server`) |
+| `textkit-word-count-whitespace` | bug_fix | easy | `word_count` splits on `" "` only: empty text, tabs and Unicode spaces miscount |
+| `textkit-strip-accents-unicode` | bug_fix | medium | `strip_accents` deletes all non-ASCII text instead of only diacritics |
+| `textkit-dedupe-iterables` | refactor | medium | `dedupe_words` mutates its argument; make it pure and iterable-friendly |
+| `textkit-parse-pairs-errors` | bug_fix | easy | `parse_pairs` leaks `IndexError` instead of `ParseError` and truncates values at `=` |
+| `textkit-indent-skip-blank` | feature | easy | Add a keyword-only `skip_blank` option to `indent` |
+| `textkit-ordinal` | feature | easy | New function `ordinal(n)` with teen exceptions and strict types |
+| `textkit-split-fields-quoted` | feature | hard | Add CSV-style double-quote support to `split_fields` without changing unquoted behaviour |
+| `textkit-display-width-unicode` | bug_fix | hard | `display_width`/`pad` ignore wide, combining and zero-width characters |
+| `textkit-line-range-inclusive` | bug_fix | easy | `line_range` is off by one |
+| `textkit-chunked-lazy` | refactor | medium | Make `chunked` a lazy iterator over any iterable, keeping eager validation |
 
-All three are **validated**: 20 hidden acceptance assertions fail on the
-pristine repository and all 30 tests pass with the bundled reference solution.
+All fourteen are **validated** in Docker: the 90 hidden `fail_to_pass` tests
+fail on the pristine repository, every `pass_to_pass` guard passes there, and
+all of them pass with the bundled reference solutions.
 
-Five demo agents exercise each outcome path: `reference-solution` (solves all
-three), `partial-solution` (solves one), `regression-introducing` (passes the
+Five demo agents exercise each outcome path: `reference-solution` (version 1.1
+solves all fourteen; 1.0, which covers only the original three, is kept so
+earlier results stay reproducible), `partial-solution` (solves one), `regression-introducing` (passes the
 hidden tests while breaking a pre-existing one), `no-op`, and `test-tamperer`
 (tries to overwrite the graded test file).
 
@@ -299,10 +315,10 @@ agentbench worker                        # standalone worker
 
 ## API
 
-`http://127.0.0.1:8000/docs` for interactive docs; 48 endpoints under
+`http://127.0.0.1:8000/docs` for interactive docs; 49 endpoints under
 `/api/v1`. Highlights: `GET /overview`, `GET /leaderboard`,
 `GET /agents/{id}/profile`, `GET /tasks/{key}/history`, `GET /compare`,
-`GET /compare/matrix?experiment_ids=a,b,c`, `GET /analytics`, `GET /failures`,
+`GET /compare/matrix?experiment_ids=a,b,c`, `GET /analytics`, `GET /published-results`, `GET /failures`,
 `GET /system/{resources,docker,local-models}` (read-only host status),
 `POST /tasks/import`, `POST /tasks/{key}/validate`, `POST /experiments`,
 `POST /experiments/{id}/{launch,cancel,resume}`,
@@ -432,8 +448,11 @@ in the agent config. It is always clamped to the run's remaining budget.
 
 ### Reproducing the bundled sample result
 
-The published figure — 26.67% (4/15) — is produced by deterministic agents, so
-it reproduces exactly:
+The figure, 21.43% (15/70, 95% Wilson CI 13.4–32.4%), is produced by
+deterministic agents, so it reproduces exactly. Per agent: `reference-solution`
+14/14, `partial-solution` 1/14, `regression-introducing`, `no-op` and
+`test-tamperer` 0/14 each. The 26.67% (4/15) under "Verified results" was
+recorded with the original three-task suite.
 
 ```bash
 rm -f data/agentbench.db*
@@ -461,7 +480,7 @@ Python 3.12.15, Node 24.22.0). Commands and counts are exact.
 
 ```
 cd backend && .venv/bin/python -m pytest -q
-→ 477 passed, 4 skipped in 200.03s   (2026-11-21)
+→ 501 passed, 4 skipped in 228.00s   (2026-11-21)
 ```
 
 The 4 skips: the live-model test (skips unless `AGENTBENCH_OPENAI_API_KEY` is
@@ -498,6 +517,10 @@ Coverage by area:
 | End-to-end in Docker | 11 | Bundled benchmark, comparison, report export |
 
 ### Real benchmark runs
+
+Recorded with the original three-task suite. With the current fourteen tasks,
+all validate and the same five agents give 15/70; see "Reproducing the
+bundled sample result".
 
 ```
 agentbench benchmark validate
@@ -653,26 +676,46 @@ Stated plainly, because an undocumented gap is worse than a known one.
 
 ### Known limitations of the UI
 
-- The experiments explorer loads the latest 100 experiments and searches those;
-  server-side search is not implemented.
-- `/failures` accepts one category at a time, so multi-category buckets filter
-  the 200 most recent failures in the browser (the page says when it does).
-- Tool results carry no call id, so the trajectory view pairs a `tool.result`
-  with a `tool.call` only when it immediately follows for the same tool.
-- System metrics are a snapshot plus a rolling history kept while the page is
-  open. Resource usage is not recorded per run. On macOS, CPU utilisation is
-  an estimate from `ps`; `psutil` is used instead when installed.
+- Sorting experiments by success, progress or duration orders the loaded page
+  (up to 100); search, state and date/name ordering run on the server.
+- Runs recorded before tool-call ids existed pair calls with results by event
+  order, and runs recorded before per-run sampling show no host memory.
+- Host memory readings are host-wide (every process, not just the run). On
+  macOS the System Monitor's CPU utilisation is an estimate from `ps`;
+  `psutil` is used instead when installed.
 - The pairwise significance test needs at least 10 scored runs per arm; every
   local-model result so far is far below that.
 
 ## Roadmap
 
-- Record resource usage (RAM, swap, container CPU) per run, so slow runs can be
-  told apart from a swapping machine.
-- Tool-call ids in the trajectory recorder for exact call/result pairing.
-- Server-side experiment search and multi-category failure filters.
-- More repetitions per task for the local models, to reach intervals narrow
-  enough to rank them.
+Done:
+
+- **Host memory and swap recorded per run.** While a run executes, a background
+  sampler reads RAM, swap and memory pressure every 10 s
+  (`AGENTBENCH_RESOURCE_SAMPLE_INTERVAL_S`, `0` disables it). The run's own
+  thread stores one `resource.summary` event, and the run page shows a
+  **Host memory** tile with a sparkline. A run is flagged *host constrained*
+  when swap grows by 256 MB or more or memory pressure reaches warning; the
+  experiment's metrics then warn that its timings may be inflated.
+- **Tool-call ids in the trajectory.** `tool.call` and `tool.result` now carry
+  the same `call_id`, so the trajectory pairs them exactly ("matched by call
+  id"). Runs recorded earlier fall back to order-based pairing and say so.
+- **Server-side experiment search** (`GET /experiments?search=&sort=newest|oldest|name`,
+  matching name, description, benchmark, agent and model) and **multi-category
+  failure filters** (`GET /failures?category=a,b`). The failure distribution
+  now respects every filter except category.
+- **Overnight repetitions for local models.** `scripts/run-local-suite.sh`
+  runs each local agent over the bundled benchmark with several repetitions,
+  one model at a time. It unloads each model from Ollama before the next,
+  keeps the Mac awake with `caffeinate`, and logs to `data/logs/`:
+
+  ```bash
+  scripts/run-local-suite.sh                                    # bonsai-2 and ornith, 5 repetitions
+  REPETITIONS=3 AGENTS="bonsai-2-27b-local@1.0" scripts/run-local-suite.sh
+  ```
+
+Next:
+
 - More benchmark suites beyond the bundled `textkit`.
 - A VM-level sandbox provider (`sandbox/base.Sandbox` is the extension point).
 
@@ -711,7 +754,7 @@ backend/
     db/ schemas/ registry/ sandbox/ adapters/
     trajectory/ grading/ orchestrator/ metrics/ monitor/ api/ cli/
   alembic/            # migrations (applies clean, no drift, reversible)
-  tests/              # 481 tests (unit + integration); fixtures/minirepo is a self-contained repo
+  tests/              # 505 tests (unit + integration); fixtures/minirepo is a self-contained repo
 benchmarks/
   textkit/            # sample repository (MIT, written for this project)
   acceptance/textkit/ # hidden grading tests — outside the repo by design

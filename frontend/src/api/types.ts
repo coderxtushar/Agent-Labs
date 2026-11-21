@@ -529,6 +529,8 @@ export interface RunDetail extends Run {
     recorded_at: string | null;
   }[];
   event_count: number;
+  /** Host memory/swap sampled during the run; null for runs recorded before sampling. */
+  resources?: ResourceSummary | null;
   task_snapshot: Record<string, unknown>;
   agent_snapshot: Record<string, unknown>;
 }
@@ -984,3 +986,74 @@ export interface LocalModels {
   agents_missing_model?: (LocalModelAgent & { model: string })[];
   read_only_note?: string;
 }
+
+// --------------------------------------------------------------------------- //
+// published third-party results (not run in Agent Labs)
+// --------------------------------------------------------------------------- //
+export interface PublishedRow {
+  rank: number;
+  model: string;
+  lab: string;
+  harness: string;
+  score_percent: number;
+  cost_per_task_usd: number | null;
+  tokens_per_task: string | null;
+  duration_per_task: string | null;
+  on_default_harness: boolean;
+  solved_estimate: number;
+  interval: { ci_low: number; ci_high: number; method: string; derived: true };
+  harness_leader: boolean;
+  /** null for the leader of its harness. */
+  tied_with_harness_leader: boolean | null;
+}
+
+export interface PublishedDataset {
+  id: string;
+  source: {
+    publisher: string;
+    url: string;
+    benchmark: string;
+    published: string;
+    retrieved: string;
+    tasks: number;
+    attempts_per_task: number;
+    default_harness: string;
+    status: string;
+    notes: string[];
+  };
+  is_agent_labs_result: false;
+  comparable_with_agent_labs_runs: false;
+  interval_note: string;
+  harnesses: string[];
+  rows: PublishedRow[];
+}
+
+export interface PublishedResults {
+  datasets: PublishedDataset[];
+  errors: string[];
+  notice: string;
+}
+
+/** Host-wide memory and swap observed while one run executed. */
+export type ResourceSummary =
+  | { supported: false; reason: string; samples: number }
+  | {
+      supported: true;
+      interval_s: number;
+      samples: number;
+      duration_s: number;
+      source: string | null;
+      memory: { total_bytes: number | null; peak_used_percent: number; mean_used_percent: number };
+      swap: {
+        start_used_bytes: number | null;
+        end_used_bytes: number | null;
+        peak_used_bytes: number | null;
+        growth_bytes: number | null;
+      };
+      pressure: { worst: "normal" | "warning" | "critical" | null; elevated_samples: number };
+      host_constrained: boolean;
+      reasons: string[];
+      note: string;
+      /** [seconds since start, RAM used %, swap used MB] */
+      series: [number, number, number][];
+    };

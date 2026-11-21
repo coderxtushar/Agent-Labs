@@ -476,3 +476,103 @@ class TestMonitor:
         assert [a["label"] for a in model["agents"]] == ["uses-local@1.0"]
         assert [a["model"] for a in body["agents_missing_model"]] == ["not-installed"]
         assert "only reads Ollama" in body["read_only_note"]
+
+
+# --------------------------------------------------------------------------- #
+class TestServerSideFilters:
+    def test_experiment_search_matches_name_agent_and_model_and_sorts(
+        self, api_client: Any, db: Session, seeded_task: Any
+    ) -> None:
+        _experiment(
+            db,
+            agent_name="zeta-agent",
+            task_keys=[seeded_task.key],
+            results=[(RunOutcome.SOLVED, 1.0)],
+        )
+        _experiment(
+            db,
+            agent_name="alpha-agent",
+            task_keys=[seeded_task.key],
+            results=[(RunOutcome.SOLVED, 1.0)],
+        )
+        url = f"{API}/experiments"
+        by_name = api_client.get(url, params={"search": "ZETA"}).json()
+        assert [e["name"] for e in by_name["items"]] == ["exp-zeta-agent"]
+        assert (
+            by_name["pagination"]["total"] == 1
+            if "pagination" in by_name
+            else by_name["total"] == 1
+        )
+        sorted_names = [
+            e["name"] for e in api_client.get(url, params={"sort": "name"}).json()["items"]
+        ]
+        assert sorted_names == ["exp-alpha-agent", "exp-zeta-agent"]
+        assert api_client.get(url, params={"sort": "sideways"}).status_code == 422
+
+    def test_excluding_simulated_experiments_keeps_the_total_correct(
+        self, api_client: Any, db: Session, seeded_task: Any
+    ) -> None:
+        from agentbench.db.models import AgentConfigRecord
+
+        sim = _experiment(
+            db, agent_name="sim", task_keys=[seeded_task.key], results=[(RunOutcome.SOLVED, 1.0)]
+        )
+        real = _experiment(
+            db, agent_name="real", task_keys=[seeded_task.key], results=[(RunOutcome.SOLVED, 1.0)]
+        )
+        # Both fixtures use the mock adapter; mark which config counts as simulated.
+        for experiment, simulated in ((sim, True), (real, False)):
+            config = db.get(AgentConfigRecord, experiment.agent_config_id)
+            assert config is not None
+            config.is_simulated = simulated
+        db.commit()
+        body = api_client.get(f"{API}/experiments", params={"include_simulated": False}).json()
+        names = [e["name"] for e in body["items"]]
+        assert names == ["exp-real"]
+        total = body.get("total", body.get("pagination", {}).get("total"))
+        assert total == 1
+
+    def test_failures_accept_several_categories_and_buckets_keep_their_counts(
+        self, api_client: Any, db: Session, seeded_task: Any
+    ) -> None:
+        record = _experiment(
+            db,
+            agent_name="failing",
+            task_keys=[seeded_task.key],
+            repetitions=3,
+            results=[
+                (RunOutcome.UNSOLVED, 1.0),
+                (RunOutcome.UNSOLVED, 1.0),
+                (RunOutcome.TIMEOUT, 1.0),
+            ],
+        )
+        runs = _runs(db, record.id)
+        for run, category in zip(
+            runs,
+            [
+                FailureCategory.INCORRECT_IMPLEMENTATION,
+                FailureCategory.TESTS_FAILING_AFTER_PATCH,
+                FailureCategory.TIMEOUT,
+            ],
+            strict=True,
+        ):
+            store_classification(db, run.id, Classification(category, rationale="fixture"))
+        db.commit()
+
+        body = api_client.get(
+            f"{API}/failures",
+            params={"category": "incorrect_implementation,tests_failing_after_patch"},
+        ).json()
+        assert {row["annotation"]["category"] for row in body["items"]} == {
+            "incorrect_implementation",
+            "tests_failing_after_patch",
+        }
+        # The distribution ignores the category filter, so every bucket keeps its count.
+        assert body["distribution"] == {
+            "incorrect_implementation": 1,
+            "tests_failing_after_patch": 1,
+            "timeout": 1,
+        }
+        # ...but it does respect the other filters.
+        scoped = api_client.get(f"{API}/failures", params={"task_id": "no-such-task"}).json()
+        assert scoped["distribution"] == {} and scoped["items"] == []

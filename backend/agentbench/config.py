@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     #: are never retried automatically.
     infra_retry_limit: int = 2
 
+    #: Seconds between host memory/swap samples taken while a run executes, so
+    #: a slow run can be told apart from a swapping machine. 0 disables it.
+    resource_sample_interval_s: float = 10.0
+
     #: Lease duration for a worker claim on a run.  A run whose lease expires is
     #: reclaimable by another worker (crash recovery).
     run_lease_seconds: int = 900

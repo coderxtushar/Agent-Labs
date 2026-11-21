@@ -46,6 +46,7 @@ from agentbench.grading.engine import EnvironmentContext, GradingEngine, Grading
 from agentbench.grading.patch import PatchResult
 from agentbench.logging_setup import get_logger
 from agentbench.metrics.failure import classify_failure, store_classification
+from agentbench.monitor.sampler import ResourceSampler
 from agentbench.orchestrator import workspace as ws
 from agentbench.sandbox.base import Sandbox, SandboxError, SandboxSpec, SandboxUnavailable
 from agentbench.sandbox.factory import create_sandbox
@@ -170,6 +171,8 @@ class RunExecutor:
             sandbox: Sandbox | None = None
             workspace: ws.PreparedWorkspace | None = None
             timings: dict[str, float] = {}
+            # Host memory/swap during the run; collected off-thread, written below.
+            sampler = ResourceSampler(self._settings.resource_sample_interval_s).start()
 
             try:
                 # -- prepare ------------------------------------------------
@@ -304,6 +307,9 @@ class RunExecutor:
                 log.exception("run.unexpected_failure", extra={"run_id": run.id})
                 return self._handle_infra_failure(session, run, recorder, detail, started, timings)
             finally:
+                resources = sampler.stop()
+                if resources is not None:
+                    recorder.record(EventType.RESOURCE_SUMMARY, resources)
                 if sandbox is not None:
                     recorder.record(EventType.SANDBOX_DESTROY, {"sandbox_id": sandbox.sandbox_id})
                     sandbox.destroy()

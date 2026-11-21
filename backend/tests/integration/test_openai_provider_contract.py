@@ -335,6 +335,53 @@ class TestHappyPath:
         assert end.payload["finished_explicitly"] is False
         assert end.payload["usage"]["input_tokens"] == 790
 
+    def test_each_tool_result_carries_the_id_of_its_call(
+        self, db: Session, seeded_task: Any, provider_factory: Any, with_key: None
+    ) -> None:
+        # Two calls in one turn: pairing by order would be ambiguous, the id is not.
+        _, base_url = provider_factory(
+            [
+                {
+                    "json": chat_response(
+                        tool_calls=[
+                            tool_call("list_files", {}, call_id="call_a"),
+                            tool_call("read_file", {"path": "calc.py"}, call_id="call_b"),
+                        ]
+                    )
+                },
+                {
+                    "json": chat_response(
+                        tool_calls=[tool_call("finish", {"summary": "x"}, "call_c")]
+                    )
+                },
+            ]
+        )
+        run = run_with_provider(db, seeded_task.key, base_url, name="prov-call-ids")
+        events = read_events(db, run.id, limit=500)
+        calls = [e.payload for e in events if e.event_type == EventType.TOOL_CALL]
+        results = [e.payload for e in events if e.event_type == EventType.TOOL_RESULT]
+        assert [c["call_id"] for c in calls] == ["call_a", "call_b", "call_c"]
+        assert [r["call_id"] for r in results] == ["call_a", "call_b", "call_c"]
+        by_id = {c["call_id"]: c["tool"] for c in calls}
+        assert all(by_id[r["call_id"]] == r["tool"] for r in results)
+
+    def test_a_tool_call_without_a_provider_id_gets_a_step_id(
+        self, db: Session, seeded_task: Any, provider_factory: Any, with_key: None
+    ) -> None:
+        anonymous = tool_call("list_files", {})
+        del anonymous["id"]
+        _, base_url = provider_factory(
+            [
+                {"json": chat_response(tool_calls=[anonymous])},
+                {"json": chat_response(tool_calls=[tool_call("finish", {"summary": "x"})])},
+            ]
+        )
+        run = run_with_provider(db, seeded_task.key, base_url, name="prov-call-noid")
+        events = read_events(db, run.id, limit=500)
+        call = next(e.payload for e in events if e.event_type == EventType.TOOL_CALL)
+        result = next(e.payload for e in events if e.event_type == EventType.TOOL_RESULT)
+        assert call["call_id"] == result["call_id"] == "call_1"
+
     def test_tool_events_are_recorded_with_arguments_and_results(
         self, db: Session, seeded_task: Any, provider_factory: Any, with_key: None
     ) -> None:

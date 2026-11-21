@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from "react";
+import { useState, type MouseEvent, useDeferredValue } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAgents, useCreateExperiment, useExperiments, useTasks } from "../api/hooks";
@@ -349,7 +349,6 @@ function CreateExperimentModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function Experiments() {
-  const experiments = useExperiments();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const [params, setParams] = useSearchParams();
@@ -361,6 +360,16 @@ export default function Experiments() {
   const sort: SortOption = SORT_OPTIONS.some((option) => option.value === sortParam)
     ? (sortParam as SortOption)
     : "newest";
+
+  // Search, state and date/name ordering run on the server, so they cover every
+  // experiment, not just the latest page. Typing is deferred, not refetched per key.
+  const deferredQuery = useDeferredValue(query.trim());
+  const serverSort = sort === "oldest" || sort === "name" ? sort : "newest";
+  const experiments = useExperiments({
+    search: deferredQuery || undefined,
+    state: stateFilter || undefined,
+    sort: serverSort,
+  });
 
   const update = (key: string, value: string) =>
     setParams(
@@ -381,21 +390,9 @@ export default function Experiments() {
     else provenanceCounts.set(experiment.provenance.value, { label: experiment.provenance.label, count: 1 });
   }
 
-  const needle = query.trim().toLowerCase();
+  // Provenance is derived per experiment, so it filters the loaded page here.
   const filtered = sortExperiments(
-    all.filter((experiment) => {
-      if (stateFilter && experiment.state !== stateFilter) return false;
-      if (provenanceFilter && experiment.provenance.value !== provenanceFilter) return false;
-      if (!needle) return true;
-      return [
-        experiment.name,
-        experiment.id,
-        experiment.agent.label,
-        experiment.agent.model ?? "",
-        experiment.agent.adapter,
-        `${experiment.benchmark_id}@${experiment.benchmark_version}`,
-      ].some((field) => field.toLowerCase().includes(needle));
-    }),
+    all.filter((experiment) => !provenanceFilter || experiment.provenance.value === provenanceFilter),
     sort,
   );
 
@@ -468,8 +465,8 @@ export default function Experiments() {
           )}
           {experiments.data && (
             <span className="subtle tnum ml-auto text-2xs">
-              {filtered.length} of {all.length} shown
-              {total !== undefined && total > all.length && ` · latest ${all.length} of ${total} loaded`}
+              {filtered.length} shown · {total ?? all.length} match on the server
+              {total !== undefined && total > all.length && ` · first ${all.length} loaded`}
             </span>
           )}
         </div>

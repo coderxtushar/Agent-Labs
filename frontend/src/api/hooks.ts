@@ -14,6 +14,7 @@ import type {
   Leaderboard,
   LocalModels,
   OverviewFull,
+  PublishedResults,
   Resources,
   TaskHistory,
   BenchmarkSummary,
@@ -180,10 +181,19 @@ export function useDeleteAgent() {
 }
 
 // --- experiments ----------------------------------------------------------- //
-export const useExperiments = (): UseQueryResult<Page<Experiment>> =>
+export interface ExperimentQuery {
+  /** Server-side match on name, description, benchmark, agent or model. */
+  search?: string;
+  state?: string;
+  sort?: "newest" | "oldest" | "name";
+  include_simulated?: boolean;
+}
+
+export const useExperiments = (query: ExperimentQuery = {}): UseQueryResult<Page<Experiment>> =>
   useQuery({
-    queryKey: ["experiments"],
-    queryFn: () => apiGet<Page<Experiment>>("/experiments", { limit: 100 }),
+    queryKey: ["experiments", query],
+    queryFn: () => apiGet<Page<Experiment>>("/experiments", { limit: 100, ...query }),
+    placeholderData: (previous) => previous,
     refetchInterval: (query) =>
       query.state.data?.items.some((item) => (item.progress?.active ?? 0) > 0 || (item.progress?.pending ?? 0) > 0)
         ? ACTIVE_POLL_MS
@@ -409,4 +419,11 @@ export const useLocalModels = (live = false): UseQueryResult<LocalModels> =>
     queryFn: () => apiGet<LocalModels>("/system/local-models"),
     refetchInterval: live ? 15_000 : false,
     staleTime: 10_000,
+  });
+
+export const usePublishedResults = (): UseQueryResult<PublishedResults> =>
+  useQuery({
+    queryKey: ["published-results"],
+    queryFn: () => apiGet<PublishedResults>("/published-results"),
+    staleTime: 5 * 60_000,
   });

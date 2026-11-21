@@ -168,6 +168,7 @@ class EventType(StrEnum):
     EVAL_END = "eval.end"
     RUN_FINALIZED = "run.finalized"
     RUN_TERMINATED = "run.terminated"
+    RESOURCE_SUMMARY = "resource.summary"
 
 
 class FailureCategory(StrEnum):

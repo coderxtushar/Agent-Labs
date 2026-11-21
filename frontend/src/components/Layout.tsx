@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { useHealth, useLocalModels } from "../api/hooks";
+import { GitHubLink, GitHubMark } from "./GitHubLink";
 import { cx } from "./ui";
 
 // --------------------------------------------------------------------------- //
@@ -14,6 +15,7 @@ const ICONS: Record<string, ReactNode> = {
   trajectories: <path d="M3 2.5v11M3 4h6.5M3 8h9M3 12h5M9.5 4a1 1 0 1 0 2 0 1 1 0 1 0-2 0M12 8a1 1 0 1 0 2 0 1 1 0 1 0-2 0" />,
   failures: <path d="M8 2 1.75 13.25h12.5L8 2zM8 6.5v3M8 11.25v.25" />,
   analytics: <path d="M2 13.5 6 8.5l3 2.5 5-7M10.5 4H14v3.5" />,
+  published: <path d="M8 1.75a6.25 6.25 0 1 1 0 12.5 6.25 6.25 0 0 1 0-12.5zM1.75 8h12.5M8 1.75c1.7 1.8 2.5 3.9 2.5 6.25S9.7 12.45 8 14.25C6.3 12.45 5.5 10.35 5.5 8S6.3 3.55 8 1.75z" />,
   models: <path d="M8 1.75 13.5 5v6L8 14.25 2.5 11V5L8 1.75zM2.5 5 8 8.25 13.5 5M8 8.25v6" />,
   agents: <path d="M8 2.25a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 13.75c.5-2.6 2.4-4 5-4s4.5 1.4 5 4" />,
   system: <path d="M2 3.5h12v7H2zM5.5 13.5h5M8 10.5v3M4 7.5l1.75-1.75L7.5 8l2-2.5L12 7.5" />,
@@ -54,6 +56,7 @@ const NAV: { section: string; items: { to: string; label: string; icon: string; 
       { to: "/trajectories", label: "Trajectories", icon: "trajectories" },
       { to: "/failures", label: "Failures", icon: "failures" },
       { to: "/analytics", label: "Analytics", icon: "analytics" },
+      { to: "/published", label: "Published results", icon: "published" },
     ],
   },
   {
@@ -207,6 +210,13 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="hairline space-y-3 border-t px-4 py-3">
         <SystemStatus />
+        <GitHubLink className="muted surface-2 hairline flex w-full items-center justify-between rounded-md border px-2 py-1 text-2xs transition-colors hover:text-[rgb(var(--text))]">
+          <span className="inline-flex items-center gap-1.5">
+            <GitHubMark className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-[-8deg]" />
+            GitHub
+          </span>
+          <span className="subtle">Agent-Labs ↗</span>
+        </GitHubLink>
         <button
           type="button"
           onClick={toggle}

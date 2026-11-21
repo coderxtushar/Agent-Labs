@@ -10,6 +10,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Query
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from agentbench.api.deps import DbSession, Pagination, WriteAccess, not_found
 from agentbench.api.schemas import (
@@ -19,7 +20,7 @@ from agentbench.api.schemas import (
     serialize_grading,
     serialize_run,
 )
-from agentbench.db.models import RunAttemptHistoryRecord, RunRecord
+from agentbench.db.models import RunAttemptHistoryRecord, RunEventRecord, RunRecord
 from agentbench.db.session import session_scope
 from agentbench.metrics.failure import (
     Classification,
@@ -27,7 +28,7 @@ from agentbench.metrics.failure import (
     effective_annotation,
     store_classification,
 )
-from agentbench.schemas.enums import ClassificationSource, RunState
+from agentbench.schemas.enums import ClassificationSource, EventType, RunState
 from agentbench.trajectory.recorder import count_events, read_events
 
 router = APIRouter(prefix="/runs", tags=["runs"])
@@ -96,9 +97,24 @@ def get_endpoint(session: DbSession, run_id: str) -> dict[str, Any]:
         ],
         "attempt_history": history,
         "event_count": count_events(session, run_id),
+        "resources": _resource_summary(session, run_id),
         "task_snapshot": record.task_snapshot,
         "agent_snapshot": _redacted_agent(record),
     }
+
+
+def _resource_summary(session: Session, run_id: str) -> dict[str, Any] | None:
+    """Host memory/swap during the run; ``None`` for runs recorded before sampling existed."""
+    row = session.execute(
+        select(RunEventRecord.payload)
+        .where(
+            RunEventRecord.run_id == run_id,
+            RunEventRecord.event_type == EventType.RESOURCE_SUMMARY,
+        )
+        .order_by(RunEventRecord.seq.desc())
+        .limit(1)
+    ).scalar()
+    return dict(row) if isinstance(row, dict) else None
 
 
 def _redacted_agent(record: RunRecord) -> dict[str, Any]:

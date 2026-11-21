@@ -1,0 +1,902 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "publisher": "Vals AI",
+    "url": "https://www.vals.ai/benchmarks/swebench",
+    "benchmark": "SWE-bench Verified",
+    "published": "2026-09-01",
+    "retrieved": "2026-11-21",
+    "tasks": 500,
+    "attempts_per_task": 1,
+    "default_harness": "Mini-SWE-agent",
+    "status": "archived \u2014 the publisher stopped running new models because scores have saturated",
+    "notes": [
+      "Scores are copied verbatim from the publisher's table; Agent Labs did not run these models.",
+      "Most rows use the bash-only mini-SWE-agent harness; rows on other harnesses (Claude Code, Codex, Cursor CLI, Factory) measure a different agent and are not directly comparable.",
+      "The publisher reports no confidence intervals. Agent Labs derives a 95% Wilson interval from the score and the 500 tasks, assuming one attempt per task.",
+      "Lab names are taken from the publisher's model links and lab filter."
+    ]
+  },
+  "rows": [
+    {
+      "rank": 1,
+      "model": "Claude Opus 5",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 97.0,
+      "cost_per_task_usd": 1.29,
+      "tokens_per_task": "1.09m",
+      "duration_per_task": "9m37s"
+    },
+    {
+      "rank": 2,
+      "model": "DeepSeek V4 Pro 0813",
+      "lab": "DeepSeek",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 96.4,
+      "cost_per_task_usd": 0.1,
+      "tokens_per_task": "764.04k",
+      "duration_per_task": "4m00s"
+    },
+    {
+      "rank": 3,
+      "model": "GPT-5.6 Sol",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 96.2,
+      "cost_per_task_usd": 1.15,
+      "tokens_per_task": "512.39k",
+      "duration_per_task": "3m02s"
+    },
+    {
+      "rank": 4,
+      "model": "Grok 4.6",
+      "lab": "xAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 95.6,
+      "cost_per_task_usd": 0.78,
+      "tokens_per_task": "968.97k",
+      "duration_per_task": "10m04s"
+    },
+    {
+      "rank": 5,
+      "model": "GPT-5.6 Terra",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 95.4,
+      "cost_per_task_usd": 0.4,
+      "tokens_per_task": "618.88k",
+      "duration_per_task": "3m00s"
+    },
+    {
+      "rank": 6,
+      "model": "GLM 5.3",
+      "lab": "Z.ai",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 95.4,
+      "cost_per_task_usd": 0.34,
+      "tokens_per_task": "958.22k",
+      "duration_per_task": "14m01s"
+    },
+    {
+      "rank": 7,
+      "model": "Claude Fable 5",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 95.0,
+      "cost_per_task_usd": 2.05,
+      "tokens_per_task": "722.57k",
+      "duration_per_task": "5m56s"
+    },
+    {
+      "rank": 8,
+      "model": "Kimi K3",
+      "lab": "Moonshot AI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 93.4,
+      "cost_per_task_usd": 0.76,
+      "tokens_per_task": "883.95k",
+      "duration_per_task": "10m19s"
+    },
+    {
+      "rank": 9,
+      "model": "GPT-5.6 Luna",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 93.0,
+      "cost_per_task_usd": 0.04,
+      "tokens_per_task": "780.98k",
+      "duration_per_task": "3m21s"
+    },
+    {
+      "rank": 10,
+      "model": "GLM 5.3 Flash",
+      "lab": "Z.ai",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 92.0,
+      "cost_per_task_usd": 0.02,
+      "tokens_per_task": "792.80k",
+      "duration_per_task": "1h04m"
+    },
+    {
+      "rank": 11,
+      "model": "DeepSeek V4 Flash 0731",
+      "lab": "DeepSeek",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 88.8,
+      "cost_per_task_usd": 0.01,
+      "tokens_per_task": "1.07m",
+      "duration_per_task": "3m22s"
+    },
+    {
+      "rank": 12,
+      "model": "Claude Opus 4.8",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 88.6,
+      "cost_per_task_usd": 1.92,
+      "tokens_per_task": "1.61m",
+      "duration_per_task": "9m27s"
+    },
+    {
+      "rank": 13,
+      "model": "Grok 4.5",
+      "lab": "xAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 86.6,
+      "cost_per_task_usd": 0.54,
+      "tokens_per_task": "753.84k",
+      "duration_per_task": "3m20s"
+    },
+    {
+      "rank": 14,
+      "model": "Muse Spark 1.2",
+      "lab": "Meta",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 86.6,
+      "cost_per_task_usd": 0.55,
+      "tokens_per_task": "2.38m",
+      "duration_per_task": "8m07s"
+    },
+    {
+      "rank": 15,
+      "model": "Qwen 3.8 27B",
+      "lab": "Alibaba",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 86.0,
+      "cost_per_task_usd": 1.08,
+      "tokens_per_task": "1.99m",
+      "duration_per_task": "10m00s"
+    },
+    {
+      "rank": 16,
+      "model": "Claude Opus 4.8",
+      "lab": "Anthropic",
+      "harness": "Claude Code",
+      "score_percent": 85.8,
+      "cost_per_task_usd": 0.67,
+      "tokens_per_task": null,
+      "duration_per_task": "2m15s"
+    },
+    {
+      "rank": 17,
+      "model": "Qwen 3.8 Max",
+      "lab": "Alibaba",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 85.6,
+      "cost_per_task_usd": 1.13,
+      "tokens_per_task": "2.74m",
+      "duration_per_task": "41m42s"
+    },
+    {
+      "rank": 18,
+      "model": "GLM 5.2",
+      "lab": "Z.ai",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 82.8,
+      "cost_per_task_usd": 0.71,
+      "tokens_per_task": "1.54m",
+      "duration_per_task": "11m10s"
+    },
+    {
+      "rank": 19,
+      "model": "GPT 5.5",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 82.6,
+      "cost_per_task_usd": 1.36,
+      "tokens_per_task": "977.93k",
+      "duration_per_task": "7m06s"
+    },
+    {
+      "rank": 20,
+      "model": "Inkling Small",
+      "lab": "Thinking Machines",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 82.2,
+      "cost_per_task_usd": 0.13,
+      "tokens_per_task": "1.73m",
+      "duration_per_task": "4m05s"
+    },
+    {
+      "rank": 21,
+      "model": "Muse Spark 1.1",
+      "lab": "Meta",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 82.0,
+      "cost_per_task_usd": 0.35,
+      "tokens_per_task": "1.61m",
+      "duration_per_task": "3m29s"
+    },
+    {
+      "rank": 22,
+      "model": "Claude Opus 4.7",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 82.0,
+      "cost_per_task_usd": 2.42,
+      "tokens_per_task": null,
+      "duration_per_task": "7m22s"
+    },
+    {
+      "rank": 23,
+      "model": "Gemini 3.7 Flash",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 80.8,
+      "cost_per_task_usd": 1.44,
+      "tokens_per_task": "3.57m",
+      "duration_per_task": "5m50s"
+    },
+    {
+      "rank": 24,
+      "model": "Gemini 3.8 Flash",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 80.0,
+      "cost_per_task_usd": 2.19,
+      "tokens_per_task": "5.92m",
+      "duration_per_task": "11m23s"
+    },
+    {
+      "rank": 25,
+      "model": "Composer 2.5",
+      "lab": "Cursor",
+      "harness": "Cursor CLI",
+      "score_percent": 79.6,
+      "cost_per_task_usd": null,
+      "tokens_per_task": null,
+      "duration_per_task": null
+    },
+    {
+      "rank": 26,
+      "model": "Gemini 3.6 Flash",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 79.6,
+      "cost_per_task_usd": 1.19,
+      "tokens_per_task": "2.53m",
+      "duration_per_task": "13m08s"
+    },
+    {
+      "rank": 27,
+      "model": "Claude Sonnet 5",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 79.6,
+      "cost_per_task_usd": 1.49,
+      "tokens_per_task": "2.94m",
+      "duration_per_task": "16m02s"
+    },
+    {
+      "rank": 28,
+      "model": "Gemini 3.5 Flash",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 78.8,
+      "cost_per_task_usd": 0.95,
+      "tokens_per_task": "1.40m",
+      "duration_per_task": "4m14s"
+    },
+    {
+      "rank": 29,
+      "model": "Gemini 3.1 Pro Preview (02/26)",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 78.8,
+      "cost_per_task_usd": 0.78,
+      "tokens_per_task": "1.26m",
+      "duration_per_task": "5m12s"
+    },
+    {
+      "rank": 30,
+      "model": "GPT 5.4 (xhigh)",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 78.2,
+      "cost_per_task_usd": 0.8,
+      "tokens_per_task": "968.25k",
+      "duration_per_task": "5m07s"
+    },
+    {
+      "rank": 31,
+      "model": "Claude Opus 4.6 (Thinking)",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 78.2,
+      "cost_per_task_usd": 1.22,
+      "tokens_per_task": "1.20m",
+      "duration_per_task": "5m51s"
+    },
+    {
+      "rank": 32,
+      "model": "Kimi K2.7 Code",
+      "lab": "Moonshot AI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 78.2,
+      "cost_per_task_usd": 0.27,
+      "tokens_per_task": "1.01m",
+      "duration_per_task": "14m57s"
+    },
+    {
+      "rank": 33,
+      "model": "GPT 5.3 Codex",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 78.0,
+      "cost_per_task_usd": 0.46,
+      "tokens_per_task": "851.64k",
+      "duration_per_task": "4m07s"
+    },
+    {
+      "rank": 34,
+      "model": "Inkling",
+      "lab": "Thinking Machines",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 77.6,
+      "cost_per_task_usd": 0.59,
+      "tokens_per_task": "2.80m",
+      "duration_per_task": "6m34s"
+    },
+    {
+      "rank": 35,
+      "model": "Claude Sonnet 4.6",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 77.4,
+      "cost_per_task_usd": 1.3,
+      "tokens_per_task": "2.22m",
+      "duration_per_task": "8m32s"
+    },
+    {
+      "rank": 36,
+      "model": "DeepSeek V4",
+      "lab": "DeepSeek",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 77.4,
+      "cost_per_task_usd": 0.44,
+      "tokens_per_task": "2.00m",
+      "duration_per_task": "10m35s"
+    },
+    {
+      "rank": 37,
+      "model": "GPT 5.5",
+      "lab": "OpenAI",
+      "harness": "Codex",
+      "score_percent": 76.4,
+      "cost_per_task_usd": 0.65,
+      "tokens_per_task": null,
+      "duration_per_task": "108.54s"
+    },
+    {
+      "rank": 38,
+      "model": "Claude Opus 4.5 (Thinking)",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 76.4,
+      "cost_per_task_usd": 1.05,
+      "tokens_per_task": "1.04m",
+      "duration_per_task": "5m21s"
+    },
+    {
+      "rank": 39,
+      "model": "Gemini 3 Pro (11/25)",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 76.4,
+      "cost_per_task_usd": 0.77,
+      "tokens_per_task": "1.22m",
+      "duration_per_task": "6m34s"
+    },
+    {
+      "rank": 40,
+      "model": "GLM 5.1",
+      "lab": "Z.ai",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 76.4,
+      "cost_per_task_usd": 0.46,
+      "tokens_per_task": null,
+      "duration_per_task": "8m47s"
+    },
+    {
+      "rank": 41,
+      "model": "GPT 5.5",
+      "lab": "OpenAI",
+      "harness": "Factory",
+      "score_percent": 76.2,
+      "cost_per_task_usd": 1.13,
+      "tokens_per_task": null,
+      "duration_per_task": "6m50s"
+    },
+    {
+      "rank": 42,
+      "model": "Kimi K2.6",
+      "lab": "Moonshot AI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 76.2,
+      "cost_per_task_usd": 0.27,
+      "tokens_per_task": null,
+      "duration_per_task": "8m40s"
+    },
+    {
+      "rank": 43,
+      "model": "GPT 5.2",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 75.8,
+      "cost_per_task_usd": 1.45,
+      "tokens_per_task": "2.09m",
+      "duration_per_task": "10m40s"
+    },
+    {
+      "rank": 44,
+      "model": "Gemini 3 Flash (12/25)",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 75.0,
+      "cost_per_task_usd": 0.28,
+      "tokens_per_task": "1.34m",
+      "duration_per_task": "4m45s"
+    },
+    {
+      "rank": 45,
+      "model": "Gemini 3.5 Flash Lite",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 75.0,
+      "cost_per_task_usd": 0.31,
+      "tokens_per_task": "1.77m",
+      "duration_per_task": "7m20s"
+    },
+    {
+      "rank": 46,
+      "model": "MiniMax-M3",
+      "lab": "MiniMax",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 75.0,
+      "cost_per_task_usd": 0.42,
+      "tokens_per_task": "2.53m",
+      "duration_per_task": "12m06s"
+    },
+    {
+      "rank": 47,
+      "model": "MiniMax-M2.1",
+      "lab": "MiniMax",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 74.8,
+      "cost_per_task_usd": 0.44,
+      "tokens_per_task": "1.44m",
+      "duration_per_task": "6m26s"
+    },
+    {
+      "rank": 48,
+      "model": "Muse Spark",
+      "lab": "Meta",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 74.4,
+      "cost_per_task_usd": null,
+      "tokens_per_task": null,
+      "duration_per_task": "8m15s"
+    },
+    {
+      "rank": 49,
+      "model": "MiniMax-M2.5",
+      "lab": "MiniMax",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 74.2,
+      "cost_per_task_usd": 0.46,
+      "tokens_per_task": null,
+      "duration_per_task": "6m43s"
+    },
+    {
+      "rank": 50,
+      "model": "MiMo V2.5 Pro",
+      "lab": "Xiaomi",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 74.0,
+      "cost_per_task_usd": 0.02,
+      "tokens_per_task": "831.27k",
+      "duration_per_task": "7m51s"
+    },
+    {
+      "rank": 51,
+      "model": "MiniMax-M2.7",
+      "lab": "MiniMax",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 73.8,
+      "cost_per_task_usd": 0.47,
+      "tokens_per_task": null,
+      "duration_per_task": "14m46s"
+    },
+    {
+      "rank": 52,
+      "model": "Qwen 3.6 Plus",
+      "lab": "Alibaba",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 73.4,
+      "cost_per_task_usd": 0.87,
+      "tokens_per_task": "1.67m",
+      "duration_per_task": "7m04s"
+    },
+    {
+      "rank": 53,
+      "model": "GPT 5.4 Mini",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 73.0,
+      "cost_per_task_usd": 0.51,
+      "tokens_per_task": "1.76m",
+      "duration_per_task": "5m26s"
+    },
+    {
+      "rank": 54,
+      "model": "Qwen 3.6 Max Preview",
+      "lab": "Alibaba",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 72.8,
+      "cost_per_task_usd": 1.57,
+      "tokens_per_task": "1.10m",
+      "duration_per_task": "17m59s"
+    },
+    {
+      "rank": 55,
+      "model": "GPT 5.2 Codex",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 72.4,
+      "cost_per_task_usd": 0.31,
+      "tokens_per_task": "480.40k",
+      "duration_per_task": "3m08s"
+    },
+    {
+      "rank": 56,
+      "model": "Grok 4.20 (Reasoning)",
+      "lab": "xAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 72.2,
+      "cost_per_task_usd": 0.52,
+      "tokens_per_task": "1.34m",
+      "duration_per_task": "2m15s"
+    },
+    {
+      "rank": 57,
+      "model": "Grok 4.3",
+      "lab": "xAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 71.4,
+      "cost_per_task_usd": 0.22,
+      "tokens_per_task": "808.76k",
+      "duration_per_task": "117.77s"
+    },
+    {
+      "rank": 58,
+      "model": "GLM 5",
+      "lab": "Z.ai",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 71.4,
+      "cost_per_task_usd": 0.45,
+      "tokens_per_task": "1.48m",
+      "duration_per_task": "8m34s"
+    },
+    {
+      "rank": 59,
+      "model": "Qwen 3.5 Plus",
+      "lab": "Alibaba",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 71.2,
+      "cost_per_task_usd": 0.96,
+      "tokens_per_task": "2.19m",
+      "duration_per_task": "8m16s"
+    },
+    {
+      "rank": 60,
+      "model": "MiMo V2.5",
+      "lab": "Xiaomi",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 71.0,
+      "cost_per_task_usd": 0.01,
+      "tokens_per_task": "975.45k",
+      "duration_per_task": "4m04s"
+    },
+    {
+      "rank": 61,
+      "model": "Kimi K2.5",
+      "lab": "Moonshot AI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 70.0,
+      "cost_per_task_usd": 0.17,
+      "tokens_per_task": "1.17m",
+      "duration_per_task": "5m39s"
+    },
+    {
+      "rank": 62,
+      "model": "Claude Sonnet 4.5 (Thinking)",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 70.0,
+      "cost_per_task_usd": 0.81,
+      "tokens_per_task": "1.36m",
+      "duration_per_task": "6m01s"
+    },
+    {
+      "rank": 63,
+      "model": "Qwen 3.6 27B",
+      "lab": "Alibaba",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 70.0,
+      "cost_per_task_usd": 0.91,
+      "tokens_per_task": "1.44m",
+      "duration_per_task": "17m09s"
+    },
+    {
+      "rank": 64,
+      "model": "GPT 5.4 Nano",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 69.8,
+      "cost_per_task_usd": 0.1,
+      "tokens_per_task": "1.33m",
+      "duration_per_task": "4m23s"
+    },
+    {
+      "rank": 65,
+      "model": "GPT 5.1",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 69.8,
+      "cost_per_task_usd": 0.71,
+      "tokens_per_task": "1.82m",
+      "duration_per_task": "8m21s"
+    },
+    {
+      "rank": 66,
+      "model": "GLM 4.7",
+      "lab": "Z.ai",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 69.4,
+      "cost_per_task_usd": 0.2,
+      "tokens_per_task": "1.50m",
+      "duration_per_task": "6m06s"
+    },
+    {
+      "rank": 67,
+      "model": "GPT 5",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 69.0,
+      "cost_per_task_usd": 0.27,
+      "tokens_per_task": "575.22k",
+      "duration_per_task": "3m53s"
+    },
+    {
+      "rank": 68,
+      "model": "Nemotron 3 Ultra",
+      "lab": "NVIDIA",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 69.0,
+      "cost_per_task_usd": null,
+      "tokens_per_task": "2.13m",
+      "duration_per_task": "4m43s"
+    },
+    {
+      "rank": 69,
+      "model": "Qwen 3.7 Max",
+      "lab": "Alibaba",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 68.8,
+      "cost_per_task_usd": 3.23,
+      "tokens_per_task": "1.26m",
+      "duration_per_task": "16m16s"
+    },
+    {
+      "rank": 70,
+      "model": "DeepSeek V3.2 (Thinking)",
+      "lab": "DeepSeek",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 67.6,
+      "cost_per_task_usd": 0.67,
+      "tokens_per_task": "2.21m",
+      "duration_per_task": "8m53s"
+    },
+    {
+      "rank": 71,
+      "model": "Claude Haiku 4.5 (Thinking)",
+      "lab": "Anthropic",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 66.6,
+      "cost_per_task_usd": 0.37,
+      "tokens_per_task": "2.01m",
+      "duration_per_task": "4m02s"
+    },
+    {
+      "rank": 72,
+      "model": "Mistral Medium 3.5",
+      "lab": "Mistral AI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 66.4,
+      "cost_per_task_usd": 4.0,
+      "tokens_per_task": "2.59m",
+      "duration_per_task": "19m04s"
+    },
+    {
+      "rank": 73,
+      "model": "Ling 3.0 Flash",
+      "lab": "Ant Group",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 65.2,
+      "cost_per_task_usd": 0.03,
+      "tokens_per_task": "1.54m",
+      "duration_per_task": "3m16s"
+    },
+    {
+      "rank": 74,
+      "model": "Qwen 3.5 Flash",
+      "lab": "Alibaba",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 64.4,
+      "cost_per_task_usd": 0.26,
+      "tokens_per_task": "2.58m",
+      "duration_per_task": "6m03s"
+    },
+    {
+      "rank": 75,
+      "model": "Gemini 3.1 Flash Lite Preview",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 62.8,
+      "cost_per_task_usd": 0.11,
+      "tokens_per_task": "973.10k",
+      "duration_per_task": "2m13s"
+    },
+    {
+      "rank": 76,
+      "model": "Devstral 2",
+      "lab": "Mistral AI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 62.8,
+      "cost_per_task_usd": 0.75,
+      "tokens_per_task": "1.81m",
+      "duration_per_task": "4m04s"
+    },
+    {
+      "rank": 77,
+      "model": "GPT 5 Mini",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 60.8,
+      "cost_per_task_usd": 0.05,
+      "tokens_per_task": "534.63k",
+      "duration_per_task": "3m07s"
+    },
+    {
+      "rank": 78,
+      "model": "Kimi K2 Thinking",
+      "lab": "Moonshot AI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 60.2,
+      "cost_per_task_usd": 0.37,
+      "tokens_per_task": "1.91m",
+      "duration_per_task": "27m12s"
+    },
+    {
+      "rank": 79,
+      "model": "Grok 4",
+      "lab": "xAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 57.8,
+      "cost_per_task_usd": 1.42,
+      "tokens_per_task": "1.10m",
+      "duration_per_task": "9m48s"
+    },
+    {
+      "rank": 80,
+      "model": "Laguna M.1",
+      "lab": "Poolside",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 57.6,
+      "cost_per_task_usd": null,
+      "tokens_per_task": "4.58m",
+      "duration_per_task": "14m46s"
+    },
+    {
+      "rank": 81,
+      "model": "Laguna XS.2",
+      "lab": "Poolside",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 55.2,
+      "cost_per_task_usd": null,
+      "tokens_per_task": "3.00m",
+      "duration_per_task": "4m30s"
+    },
+    {
+      "rank": 82,
+      "model": "Gemini 2.5 Pro",
+      "lab": "Google",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 54.4,
+      "cost_per_task_usd": 0.35,
+      "tokens_per_task": "685.13k",
+      "duration_per_task": "3m28s"
+    },
+    {
+      "rank": 83,
+      "model": "Nemotron 3.5 Lightning",
+      "lab": "NVIDIA",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 52.8,
+      "cost_per_task_usd": 0.03,
+      "tokens_per_task": "2.49m",
+      "duration_per_task": "15m25s"
+    },
+    {
+      "rank": 84,
+      "model": "Grok 4 Fast (Reasoning)",
+      "lab": "xAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 45.4,
+      "cost_per_task_usd": 0.05,
+      "tokens_per_task": "756.51k",
+      "duration_per_task": "2m06s"
+    },
+    {
+      "rank": 85,
+      "model": "Grok 4.1 Fast (Reasoning)",
+      "lab": "xAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 41.4,
+      "cost_per_task_usd": 0.03,
+      "tokens_per_task": "262.25k",
+      "duration_per_task": "2m18s"
+    },
+    {
+      "rank": 86,
+      "model": "Mistral Large 3",
+      "lab": "Mistral AI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 41.4,
+      "cost_per_task_usd": 0.32,
+      "tokens_per_task": "628.97k",
+      "duration_per_task": "3m07s"
+    },
+    {
+      "rank": 87,
+      "model": "GPT OSS 120B",
+      "lab": "OpenAI",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 33.6,
+      "cost_per_task_usd": 0.17,
+      "tokens_per_task": "1.11m",
+      "duration_per_task": "4m16s"
+    },
+    {
+      "rank": 88,
+      "model": "Command A",
+      "lab": "Cohere",
+      "harness": "Mini-SWE-agent",
+      "score_percent": 7.8,
+      "cost_per_task_usd": 0.21,
+      "tokens_per_task": "81.35k",
+      "duration_per_task": "3m48s"
+    }
+  ]
+}

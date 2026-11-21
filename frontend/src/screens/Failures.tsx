@@ -124,7 +124,6 @@ function bucketOf(category: string): Bucket {
 }
 
 const PAGE_SIZE = 50;
-const BUCKET_PAGE = 200;
 
 function CategoryLabel({ category }: { category: string }) {
   if (category === "unknown") {
@@ -249,10 +248,9 @@ export default function Failures() {
       { replace: true },
     );
 
-  const singleBucketCategory =
-    bucketOnly && activeBucket && activeBucket.categories.length === 1 ? activeBucket.categories[0] : "";
-  const serverCategory = category || singleBucketCategory;
-  const clientFiltered = bucketOnly && !singleBucketCategory;
+  // A bucket asks the server for all of its categories at once (`category=a,b`),
+  // so every page of a multi-category bucket is complete and correctly counted.
+  const serverCategory = category || (bucketOnly && activeBucket ? activeBucket.categories.join(",") : "");
 
   const failures = useFailures({
     category: serverCategory || undefined,
@@ -260,8 +258,8 @@ export default function Failures() {
     source: source || undefined,
     search: search || undefined,
     task_id: taskId || undefined,
-    limit: clientFiltered ? BUCKET_PAGE : PAGE_SIZE,
-    offset: clientFiltered ? 0 : offset,
+    limit: PAGE_SIZE,
+    offset,
   });
   const experiments = useExperiments();
 
@@ -278,11 +276,7 @@ export default function Failures() {
   }, [distribution]);
   const activeBucketView = activeBucket ? buckets.find((bucket) => bucket.id === activeBucket.id) : undefined;
 
-  const items = useMemo(() => {
-    const all = failures.data?.items ?? [];
-    if (!clientFiltered || !activeBucketView) return all;
-    return all.filter((row) => activeBucketView.categories.includes(row.annotation.category));
-  }, [failures.data, clientFiltered, activeBucketView]);
+  const items = failures.data?.items ?? [];
 
   const hasFilters = Boolean(category || bucketParam || experimentId || source || search || taskId);
   const clearAll = () =>
@@ -363,7 +357,7 @@ export default function Failures() {
           <Note>
             Buckets group raw categories for reading; the raw category is always shown. Infrastructure and grading
             errors are not agent failures and are excluded from success-rate denominators. "Unclassified" means the
-            evidence was ambiguous and nothing was guessed. Counts respect the experiment filter only.
+            evidence was ambiguous and nothing was guessed. Counts respect every filter except the category you pick.
           </Note>
         </section>
       )}
@@ -371,11 +365,7 @@ export default function Failures() {
       <Card
         title={activeBucketView ? `Failures · ${activeBucketView.label}` : "Failures"}
         subtitle={
-          pagination
-            ? clientFiltered
-              ? `${items.length} shown from the ${failures.data?.items.length ?? 0} most recent matching failures`
-              : `${pagination.total} matching`
-            : undefined
+          pagination ? `${pagination.total} matching` : undefined
         }
         actions={hasFilters ? <Button variant="ghost" onClick={clearAll}>Clear filters</Button> : undefined}
       >
@@ -457,15 +447,6 @@ export default function Failures() {
             </Badge>
           )}
         </div>
-
-        {clientFiltered && failures.data && failures.data.pagination.has_more && (
-          <div className="hairline border-b px-3 py-2">
-            <Note tone="warn">
-              This bucket spans several categories, so the list shows matches among the {BUCKET_PAGE} most recent
-              failures only. Pick a single category above to page through all of them.
-            </Note>
-          </div>
-        )}
 
         {failures.isError && (
           <div className="p-4">
@@ -579,7 +560,7 @@ export default function Failures() {
           </Table>
         )}
 
-        {!clientFiltered && pagination && pagination.total > PAGE_SIZE && (
+        {pagination && pagination.total > PAGE_SIZE && (
           <div className="hairline flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2.5">
             <p className="subtle tnum text-2xs">
               {pagination.offset + 1}–{Math.min(pagination.offset + pagination.limit, pagination.total)} of{" "}

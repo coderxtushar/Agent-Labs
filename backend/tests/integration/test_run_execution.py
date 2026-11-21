@@ -383,3 +383,55 @@ class TestEvidenceTrail:
         assert annotation.rationale
         assert annotation.evidence_refs["run_id"] == run.id
         assert annotation.evidence_refs["layer_statuses"]
+
+
+class TestHostResources:
+    def test_a_run_records_host_memory_during_execution(
+        self, db: Session, seeded_task: Any, noop_agent: Any, api_client: Any
+    ) -> None:
+        from agentbench.trajectory.recorder import read_events
+
+        run = run_single(db, seeded_task.key, noop_agent.id)
+        summaries = [
+            e for e in read_events(db, run.id, limit=500) if e.event_type == "resource.summary"
+        ]
+        assert len(summaries) == 1
+        payload = summaries[0].payload
+        assert "supported" in payload
+        if payload["supported"]:
+            assert payload["samples"] >= 2
+            assert "host_constrained" in payload and "series" in payload
+
+        body = api_client.get(f"/api/v1/runs/{run.id}").json()
+        assert body["resources"] == payload
+
+    def test_sampling_can_be_disabled(
+        self, db: Session, seeded_task: Any, noop_agent: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from agentbench.config import reset_settings_cache
+        from agentbench.trajectory.recorder import read_events
+
+        monkeypatch.setenv("AGENTBENCH_RESOURCE_SAMPLE_INTERVAL_S", "0")
+        reset_settings_cache()
+        run = run_single(db, seeded_task.key, noop_agent.id)
+        types = [e.event_type for e in read_events(db, run.id, limit=500)]
+        assert "resource.summary" not in types
+
+    def test_constrained_runs_are_called_out_in_experiment_metrics(
+        self, db: Session, seeded_task: Any, noop_agent: Any
+    ) -> None:
+        from agentbench.db.models import RunEventRecord
+        from agentbench.metrics.compute import experiment_metrics
+
+        run = run_single(db, seeded_task.key, noop_agent.id)
+        db.add(
+            RunEventRecord(
+                run_id=run.id,
+                seq=10_000,
+                event_type="resource.summary",
+                payload={"supported": True, "host_constrained": True},
+            )
+        )
+        db.commit()
+        warnings = experiment_metrics(db, run.experiment_id).warnings
+        assert any("swapping or under memory pressure" in w for w in warnings)

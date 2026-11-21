@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "benchmark_id": "textkit",
   "benchmark_version": "1.0",
-  "description": "Three tasks over the self-authored `textkit` sample repository: a separator-collapse bug fix, an unimplemented word-wrap feature, and a truncation fix with a regression trap. Hidden acceptance tests are injected at grading time only.",
+  "description": "Fourteen tasks over the self-authored `textkit` sample repository: bug fixes (separator collapse, acronym casing, whitespace and Unicode handling, off-by-one, wrong error type, display width), features (word wrap, an option, a new function, quoted-field parsing), behaviour-preserving refactors with checkable contracts (purity, lazy iteration), and a truncation fix with a regression trap. Each task is confined to its own module so tasks stay independent. Hidden acceptance tests are injected at grading time only.",
   "tasks": [
     {
       "task_id": "textkit-slugify-collapse",
@@ -242,6 +242,1034 @@
       "hints": [
         "Reserve len(suffix) characters from the limit before cutting.",
         "str.rfind(' ') locates the last word boundary in the budget."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-snake-case-acronyms",
+      "version": "1.0",
+      "title": "snake_case splits acronyms into single letters",
+      "description": "snake_case inserts an underscore before every uppercase letter, so acronyms such as HTTP or ID are shredded into one-letter words.",
+      "problem_statement": "`textkit.case.snake_case` splits acronyms into single letters.\n\nReproduction:\n\n    >>> from textkit.case import snake_case\n    >>> snake_case(\"HTTPServer\")\n    'h_t_t_p_server'\n\nExpected: 'http_server'\n\nRequired behaviour:\n\n- A run of consecutive uppercase letters belongs to one word. An uppercase letter starts a new word only when it follows a lowercase letter or a digit, or when it follows another uppercase letter and is itself followed by a lowercase letter (in that case it is the first letter of the next word).\n- So `XMLHttpRequest` becomes `xml_http_request` and `userID` becomes `user_id`.\n- Spaces, hyphens and underscores still separate words. The result is lowercase, never contains two underscores in a row, and never starts or ends with an underscore.\n\nExisting behaviour covered by `tests/test_case.py` (camelCase, PascalCase, spaces and hyphens, input that is already snake_case) must not change. Keep the function signature.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "bug_fix",
+      "difficulty": "medium",
+      "tags": [
+        "string-handling",
+        "bug-fix",
+        "identifiers",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_snake_case_acronyms.py::test_leading_acronym",
+          "tests/test_acceptance_snake_case_acronyms.py::test_acronym_in_the_middle",
+          "tests/test_acceptance_snake_case_acronyms.py::test_trailing_acronym",
+          "tests/test_acceptance_snake_case_acronyms.py::test_all_caps_word",
+          "tests/test_acceptance_snake_case_acronyms.py::test_acronym_followed_by_capitalised_word",
+          "tests/test_acceptance_snake_case_acronyms.py::test_acronym_before_explicit_separator"
+        ],
+        "pass_to_pass": [
+          "tests/test_case.py::test_camel_case",
+          "tests/test_case.py::test_pascal_case",
+          "tests/test_case.py::test_spaces_and_hyphens",
+          "tests/test_case.py::test_already_snake_case_is_unchanged",
+          "tests/test_case.py::test_digits_stay_attached",
+          "tests/test_case.py::test_uppercase_after_digit_starts_a_word",
+          "tests/test_case.py::test_no_leading_trailing_or_double_underscores",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_snake_case_acronyms.py": {
+            "$file": "acceptance/textkit/snake_case_acronyms.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 900,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 60
+      },
+      "context_files": [
+        "src/textkit/case.py",
+        "tests/test_case.py"
+      ],
+      "acceptance_criteria": [
+        "Acronyms stay together as one word (HTTPServer -> http_server)",
+        "An acronym followed by a capitalised word is split before that word's first letter",
+        "An uppercase letter after a digit starts a new word",
+        "No double, leading or trailing underscores",
+        "Existing tests in tests/test_case.py continue to pass"
+      ],
+      "hints": [
+        "Look at the characters on both sides of an uppercase letter before deciding to insert an underscore."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-word-count-whitespace",
+      "version": "1.0",
+      "title": "word_count miscounts runs of whitespace and non-space separators",
+      "description": "word_count splits on a single ASCII space, so empty text, repeated spaces, tabs, newlines and Unicode spaces all produce wrong counts.",
+      "problem_statement": "`textkit.stats.word_count` miscounts words whenever the whitespace is anything other than single ASCII spaces.\n\nReproduction:\n\n    >>> from textkit.stats import word_count\n    >>> word_count(\"\")\n    1\n    >>> word_count(\"hello   world\")\n    4\n\nExpected: 0 and 2.\n\nRequired behaviour:\n\n- A word is a maximal run of non-whitespace characters.\n- Any character for which `str.isspace()` is true separates words: spaces, tabs, newlines, carriage returns, and Unicode spaces such as U+00A0 NO-BREAK SPACE or U+3000 IDEOGRAPHIC SPACE.\n- A run of whitespace counts as one separator, and leading or trailing whitespace adds no words.\n- Empty or whitespace-only text has 0 words.\n\nPunctuation stays part of the word it touches (`\"hello, world!\"` is 2 words). Keep the signature; `tests/test_stats.py` must keep passing.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "bug_fix",
+      "difficulty": "easy",
+      "tags": [
+        "string-handling",
+        "bug-fix",
+        "unicode",
+        "whitespace",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_word_count_whitespace.py::test_empty_text_has_no_words",
+          "tests/test_acceptance_word_count_whitespace.py::test_whitespace_only_has_no_words",
+          "tests/test_acceptance_word_count_whitespace.py::test_repeated_spaces_count_once",
+          "tests/test_acceptance_word_count_whitespace.py::test_leading_and_trailing_whitespace_is_ignored",
+          "tests/test_acceptance_word_count_whitespace.py::test_tabs_and_newlines_separate_words",
+          "tests/test_acceptance_word_count_whitespace.py::test_unicode_spaces_separate_words"
+        ],
+        "pass_to_pass": [
+          "tests/test_stats.py::test_two_words",
+          "tests/test_stats.py::test_single_word",
+          "tests/test_stats.py::test_sentence",
+          "tests/test_stats.py::test_punctuation_belongs_to_the_word",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_word_count_whitespace.py": {
+            "$file": "acceptance/textkit/word_count_whitespace.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 600,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 40
+      },
+      "context_files": [
+        "src/textkit/stats.py",
+        "tests/test_stats.py"
+      ],
+      "acceptance_criteria": [
+        "Empty and whitespace-only text count as 0 words",
+        "Runs of whitespace count as a single separator",
+        "Tabs, newlines and Unicode whitespace separate words",
+        "Existing tests in tests/test_stats.py continue to pass"
+      ],
+      "hints": [
+        "str.split() with no arguments splits on any run of whitespace."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-strip-accents-unicode",
+      "version": "1.0",
+      "title": "strip_accents deletes every non-ASCII character",
+      "description": "strip_accents encodes to ASCII with errors ignored, so accented letters lose their base letter and non-Latin text disappears entirely.",
+      "problem_statement": "`textkit.accents.strip_accents` is supposed to remove diacritical marks, but it deletes every non-ASCII character instead.\n\nReproduction:\n\n    >>> from textkit.accents import strip_accents\n    >>> strip_accents(\"café\")\n    'caf'\n    >>> strip_accents(\"日本語\")\n    ''\n\nExpected: 'cafe' and '日本語'.\n\nRequired behaviour:\n\n- Remove diacritical marks (Unicode combining marks) and keep the base letter: `\"naïve\"` becomes `\"naive\"` and `\"Ångström\"` becomes `\"Angstrom\"`. This applies to every script that uses combining diacritics, not only Latin.\n- An accent written as a separate combining character (for example `\"e\\u0301\"`) is removed exactly like a precomposed one (`\"é\"`).\n- Every character that does not carry a diacritic must come back exactly as it was, with the same code points: ASCII, letters such as `ß`, and non-Latin text such as Japanese or Korean must not be dropped, transliterated, or returned in a decomposed form.\n\nDo not change the signature. `tests/test_accents.py` must keep passing.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "bug_fix",
+      "difficulty": "medium",
+      "tags": [
+        "unicode",
+        "bug-fix",
+        "normalization",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_strip_accents_unicode.py::test_precomposed_accents_are_removed",
+          "tests/test_acceptance_strip_accents_unicode.py::test_several_accents_in_a_phrase",
+          "tests/test_acceptance_strip_accents_unicode.py::test_decomposed_accents_are_removed",
+          "tests/test_acceptance_strip_accents_unicode.py::test_greek_tonos_is_removed",
+          "tests/test_acceptance_strip_accents_unicode.py::test_japanese_is_unchanged",
+          "tests/test_acceptance_strip_accents_unicode.py::test_korean_is_returned_with_identical_code_points",
+          "tests/test_acceptance_strip_accents_unicode.py::test_letters_without_diacritics_are_kept"
+        ],
+        "pass_to_pass": [
+          "tests/test_accents.py::test_ascii_is_unchanged",
+          "tests/test_accents.py::test_empty_string",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_strip_accents_unicode.py": {
+            "$file": "acceptance/textkit/strip_accents_unicode.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 900,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 60
+      },
+      "context_files": [
+        "src/textkit/accents.py",
+        "tests/test_accents.py"
+      ],
+      "acceptance_criteria": [
+        "Precomposed and decomposed accents are both removed, keeping the base letter",
+        "Accents on non-Latin scripts are removed too",
+        "Characters without diacritics keep their exact code points",
+        "Existing tests in tests/test_accents.py continue to pass"
+      ],
+      "hints": [
+        "The unicodedata module can decompose characters and report which code points are combining marks.",
+        "Some characters decompose without having any accent; check what you return for them."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-dedupe-iterables",
+      "version": "1.0",
+      "title": "Make dedupe_words pure and accept any iterable",
+      "description": "dedupe_words removes duplicates by deleting from the caller's list and needs len()/indexing; refactor it to be non-mutating and iterable-friendly without changing its results.",
+      "problem_statement": "`textkit.dedupe.dedupe_words` returns the right words, but it works by deleting items from the list it was given, so callers lose their data, and it only works on mutable sequences.\n\nReproduction:\n\n    >>> from textkit.dedupe import dedupe_words\n    >>> words = [\"a\", \"b\", \"a\"]\n    >>> dedupe_words(words)\n    ['a', 'b']\n    >>> words\n    ['a', 'b']          # the caller's list was modified\n    >>> dedupe_words(w for w in [\"a\", \"a\"])\n    TypeError: object of type 'generator' has no len()\n\nRefactor it so that:\n\n- It never modifies its argument and always returns a new `list`, never the object it was passed.\n- It accepts any iterable of strings: lists, tuples, generators and one-shot iterators, each consumed exactly once.\n- Its results are otherwise unchanged: duplicates are removed, the first occurrence of each word is kept in its original position, and with `case_sensitive=False` words are compared using `str.lower()` and the first spelling seen is the one returned.\n\nKeep the function name, the parameters and the keyword-only `case_sensitive` flag. `tests/test_dedupe.py` describes behaviour that must not change.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "refactor",
+      "difficulty": "medium",
+      "tags": [
+        "refactor",
+        "purity",
+        "iterables",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_dedupe_iterables.py::test_input_list_is_not_mutated",
+          "tests/test_acceptance_dedupe_iterables.py::test_returns_a_new_list",
+          "tests/test_acceptance_dedupe_iterables.py::test_accepts_a_tuple",
+          "tests/test_acceptance_dedupe_iterables.py::test_accepts_a_generator",
+          "tests/test_acceptance_dedupe_iterables.py::test_accepts_a_one_shot_iterator_case_insensitively"
+        ],
+        "pass_to_pass": [
+          "tests/test_dedupe.py::test_removes_duplicates",
+          "tests/test_dedupe.py::test_keeps_first_occurrence_order",
+          "tests/test_dedupe.py::test_case_insensitive_keeps_first_spelling",
+          "tests/test_dedupe.py::test_case_sensitive_by_default",
+          "tests/test_dedupe.py::test_empty_input",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_dedupe_iterables.py": {
+            "$file": "acceptance/textkit/dedupe_iterables.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 900,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 60
+      },
+      "context_files": [
+        "src/textkit/dedupe.py",
+        "tests/test_dedupe.py"
+      ],
+      "acceptance_criteria": [
+        "The argument is never mutated",
+        "A new list is always returned",
+        "Tuples, generators and one-shot iterators are accepted",
+        "Order and case-insensitive behaviour are unchanged",
+        "Existing tests in tests/test_dedupe.py continue to pass"
+      ],
+      "hints": [
+        "Build the result in a fresh list while tracking the keys already seen."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-parse-pairs-errors",
+      "version": "1.0",
+      "title": "parse_pairs raises the wrong error and truncates values",
+      "description": "parse_pairs never raises its documented ParseError (it leaks IndexError or silently accepts an empty key) and drops everything after a second '=' in a value.",
+      "problem_statement": "`textkit.pairs.parse_pairs` documents that malformed input raises `textkit.pairs.ParseError`, but it never does, and it mangles values that contain `=`.\n\nReproduction:\n\n    >>> from textkit.pairs import parse_pairs\n    >>> parse_pairs(\"a=1;oops\")\n    IndexError: list index out of range\n    >>> parse_pairs(\"=1\")\n    {'': '1'}\n    >>> parse_pairs(\"expr=x=1\")\n    {'expr': 'x'}\n\nRequired behaviour:\n\n- A non-empty segment that contains no `=` raises `ParseError`.\n- A segment whose key is empty or whitespace-only (for example `\"=1\"` or `\"  = 2\"`) raises `ParseError`.\n- The `ParseError` message contains the offending segment text, with its surrounding whitespace stripped, so the user can find it.\n- Only the first `=` in a segment separates the key from the value; the value keeps every later `=` (`\"expr=x=1\"` gives `{\"expr\": \"x=1\"}`).\n\nMust not change: `ParseError` remains a subclass of `ValueError`; empty segments are skipped; keys and values are stripped; an empty value (`\"key=\"`) is allowed; the last value of a repeated key wins; the `sep` argument keeps working. See `tests/test_pairs.py`.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "bug_fix",
+      "difficulty": "easy",
+      "tags": [
+        "parsing",
+        "bug-fix",
+        "error-handling",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_parse_pairs_errors.py::test_segment_without_equals_raises_parse_error",
+          "tests/test_acceptance_parse_pairs_errors.py::test_missing_equals_is_still_a_value_error",
+          "tests/test_acceptance_parse_pairs_errors.py::test_empty_key_raises_parse_error",
+          "tests/test_acceptance_parse_pairs_errors.py::test_blank_key_raises_parse_error",
+          "tests/test_acceptance_parse_pairs_errors.py::test_error_message_names_the_offending_segment",
+          "tests/test_acceptance_parse_pairs_errors.py::test_value_may_contain_equals_signs"
+        ],
+        "pass_to_pass": [
+          "tests/test_pairs.py::test_basic_pairs",
+          "tests/test_pairs.py::test_whitespace_is_stripped_and_empty_segments_ignored",
+          "tests/test_pairs.py::test_empty_input",
+          "tests/test_pairs.py::test_custom_separator",
+          "tests/test_pairs.py::test_empty_value_is_allowed",
+          "tests/test_pairs.py::test_last_value_wins",
+          "tests/test_pairs.py::test_parse_error_is_a_value_error",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_parse_pairs_errors.py": {
+            "$file": "acceptance/textkit/parse_pairs_errors.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 600,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 40
+      },
+      "context_files": [
+        "src/textkit/pairs.py",
+        "tests/test_pairs.py"
+      ],
+      "acceptance_criteria": [
+        "Segments without '=' raise ParseError",
+        "Empty or blank keys raise ParseError",
+        "The error message names the offending segment",
+        "Values may contain '='",
+        "Existing tests in tests/test_pairs.py continue to pass"
+      ],
+      "hints": [
+        "str.partition splits on the first occurrence only."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-indent-skip-blank",
+      "version": "1.0",
+      "title": "Add a skip_blank option to indent",
+      "description": "indent prefixes every line, including blank ones; add a keyword-only skip_blank flag that leaves empty and whitespace-only lines untouched.",
+      "problem_statement": "Add a `skip_blank` option to `textkit.indent.indent`.\n\nToday `indent(text, prefix)` prefixes every line, including blank ones:\n\n    >>> from textkit.indent import indent\n    >>> indent(\"a\\n\\nb\", \"> \")\n    '> a\\n> \\n> b'\n\nAdd a keyword-only parameter `skip_blank: bool = False`:\n\n- With `skip_blank=True`, a line that is empty or contains only whitespace is returned unchanged: no prefix, and its own whitespace is kept. All other lines are prefixed as before.\n- Line endings, including `\\r\\n`, are preserved exactly, and no newline is added or removed.\n- The default (`skip_blank=False`) behaves exactly as today, and existing calls of the form `indent(text, prefix)` keep working.\n\nExample: `indent(\"def f():\\n\\n    pass\\n\", \"    \", skip_blank=True)` returns `\"    def f():\\n\\n        pass\\n\"`.\n\n`tests/test_indent.py` must keep passing.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "feature",
+      "difficulty": "easy",
+      "tags": [
+        "feature",
+        "string-handling",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_indent_skip_blank.py::test_skip_blank_leaves_empty_lines_alone",
+          "tests/test_acceptance_indent_skip_blank.py::test_skip_blank_leaves_whitespace_only_lines_alone",
+          "tests/test_acceptance_indent_skip_blank.py::test_skip_blank_preserves_crlf",
+          "tests/test_acceptance_indent_skip_blank.py::test_skip_blank_false_matches_default_behaviour",
+          "tests/test_acceptance_indent_skip_blank.py::test_skip_blank_on_text_without_blank_lines"
+        ],
+        "pass_to_pass": [
+          "tests/test_indent.py::test_prefixes_every_line",
+          "tests/test_indent.py::test_trailing_newline_is_preserved",
+          "tests/test_indent.py::test_blank_lines_are_prefixed_by_default",
+          "tests/test_indent.py::test_crlf_is_preserved",
+          "tests/test_indent.py::test_empty_text",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_indent_skip_blank.py": {
+            "$file": "acceptance/textkit/indent_skip_blank.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 600,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 40
+      },
+      "context_files": [
+        "src/textkit/indent.py",
+        "tests/test_indent.py"
+      ],
+      "acceptance_criteria": [
+        "skip_blank is a keyword-only parameter defaulting to False",
+        "With skip_blank=True, empty and whitespace-only lines are left unchanged",
+        "Line endings are preserved exactly",
+        "Default behaviour is unchanged"
+      ],
+      "hints": [
+        "A line from splitlines(keepends=True) still carries its line ending; ignore it when deciding whether the line is blank."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-ordinal",
+      "version": "1.0",
+      "title": "Add ordinal() to textkit.numbers",
+      "description": "New function: format a non-negative int with its English ordinal suffix, including the 11th/12th/13th exceptions and strict type checking.",
+      "problem_statement": "Add a new function `ordinal(n)` to `src/textkit/numbers.py`, next to `format_count`. It returns a non-negative integer followed by its English ordinal suffix.\n\nRequired behaviour:\n\n- The suffix is `st` for numbers ending in 1, `nd` for numbers ending in 2, `rd` for numbers ending in 3, and `th` otherwise: `ordinal(1) == \"1st\"`, `ordinal(22) == \"22nd\"`, `ordinal(4) == \"4th\"`, `ordinal(0) == \"0th\"`.\n- Numbers whose last two digits are 11, 12 or 13 always take `th`: `ordinal(12) == \"12th\"`, `ordinal(111) == \"111th\"`.\n- A negative `n` raises `ValueError`.\n- Anything that is not an `int` (for example `2.0` or `\"3\"`) raises `TypeError`. `bool` is rejected with `TypeError` as well, even though it is a subclass of `int`.\n\nIt must be importable as `from textkit.numbers import ordinal`. Do not change `format_count`; `tests/test_numbers.py` must keep passing.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "feature",
+      "difficulty": "easy",
+      "tags": [
+        "feature",
+        "formatting",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_ordinal.py::test_first_ten",
+          "tests/test_acceptance_ordinal.py::test_teens_always_take_th",
+          "tests/test_acceptance_ordinal.py::test_twenties",
+          "tests/test_acceptance_ordinal.py::test_hundreds",
+          "tests/test_acceptance_ordinal.py::test_negative_raises_value_error",
+          "tests/test_acceptance_ordinal.py::test_non_integers_raise_type_error",
+          "tests/test_acceptance_ordinal.py::test_bool_is_rejected"
+        ],
+        "pass_to_pass": [
+          "tests/test_numbers.py::test_singular",
+          "tests/test_numbers.py::test_plural",
+          "tests/test_numbers.py::test_zero_is_plural",
+          "tests/test_numbers.py::test_irregular_plural",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_ordinal.py": {
+            "$file": "acceptance/textkit/ordinal.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 600,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 40
+      },
+      "context_files": [
+        "src/textkit/numbers.py",
+        "tests/test_numbers.py"
+      ],
+      "acceptance_criteria": [
+        "Correct st/nd/rd/th suffixes",
+        "11, 12 and 13 (and 111, 112, 113, ...) take 'th'",
+        "Negative input raises ValueError",
+        "Non-int input, including bool, raises TypeError",
+        "format_count is unchanged"
+      ],
+      "hints": [
+        "Check n % 100 before n % 10."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-split-fields-quoted",
+      "version": "1.0",
+      "title": "Support double-quoted fields in split_fields",
+      "description": "split_fields is a plain str.split; add CSV-style double-quote support (embedded separators, doubled quotes, strict errors) without changing unquoted behaviour.",
+      "problem_statement": "`textkit.fields.split_fields(line, sep=\",\")` is a plain `str.split`, so a quoted field that contains the separator is broken apart:\n\n    >>> from textkit.fields import split_fields\n    >>> split_fields('\"Smith, Jane\",42')\n    ['\"Smith', ' Jane\"', '42']\n\nExpected: ['Smith, Jane', '42']\n\nAdd double-quote support with exactly these rules:\n\n- A field is quoted only if its first character is `\"`. A quoted field ends at the matching closing `\"`. Between the quotes the separator is an ordinary character, and two consecutive quotes `\"\"` stand for one literal `\"`. The enclosing quotes are not part of the returned value, so a field written as `\"\"` is an empty string.\n- After a closing quote, the next character must be the separator or the end of the line; anything else raises `ValueError`.\n- A quoted field without a closing quote raises `ValueError`.\n- A `\"` anywhere other than the first character of a field is an ordinary character and is kept as written. This includes a field that starts with a space followed by a quote.\n- Quoting works with any single-character `sep`.\n\nUnquoted behaviour must not change (see `tests/test_fields.py`): whitespace is preserved, empty fields are kept, an empty line yields `[\"\"]`, a trailing separator yields a trailing empty field, and a multi-character `sep` raises `ValueError`.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "feature",
+      "difficulty": "hard",
+      "tags": [
+        "feature",
+        "parsing",
+        "state-machine",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_split_fields_quoted.py::test_quoted_field_may_contain_the_separator",
+          "tests/test_acceptance_split_fields_quoted.py::test_doubled_quote_is_a_literal_quote",
+          "tests/test_acceptance_split_fields_quoted.py::test_empty_quoted_field",
+          "tests/test_acceptance_split_fields_quoted.py::test_quoted_last_field_and_trailing_separator",
+          "tests/test_acceptance_split_fields_quoted.py::test_quoted_field_with_custom_separator",
+          "tests/test_acceptance_split_fields_quoted.py::test_unterminated_quote_raises_value_error",
+          "tests/test_acceptance_split_fields_quoted.py::test_text_after_closing_quote_raises_value_error"
+        ],
+        "pass_to_pass": [
+          "tests/test_fields.py::test_plain_fields",
+          "tests/test_fields.py::test_empty_fields_are_kept",
+          "tests/test_fields.py::test_trailing_separator_gives_trailing_empty_field",
+          "tests/test_fields.py::test_empty_line_is_one_empty_field",
+          "tests/test_fields.py::test_whitespace_is_preserved",
+          "tests/test_fields.py::test_custom_separator",
+          "tests/test_fields.py::test_quote_inside_an_unquoted_field_is_literal",
+          "tests/test_fields.py::test_rejects_multi_character_separator",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_split_fields_quoted.py": {
+            "$file": "acceptance/textkit/split_fields_quoted.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 900,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 60
+      },
+      "context_files": [
+        "src/textkit/fields.py",
+        "tests/test_fields.py"
+      ],
+      "acceptance_criteria": [
+        "Quoted fields may contain the separator",
+        "Doubled quotes inside a quoted field become one literal quote",
+        "Unterminated quotes and text after a closing quote raise ValueError",
+        "Quotes that do not start a field are literal",
+        "Unquoted behaviour in tests/test_fields.py is unchanged"
+      ],
+      "hints": [
+        "Scan with an index and treat quoted and unquoted fields as two separate branches.",
+        "The csv module's handling of empty lines and malformed quotes does not match this contract."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-display-width-unicode",
+      "version": "1.0",
+      "title": "display_width and pad ignore wide and zero-width characters",
+      "description": "display_width uses len(), and pad has its own copy of that bug plus wrong centring and silent acceptance of unknown alignments, so CJK, emoji and combining marks misalign.",
+      "problem_statement": "`textkit.width.display_width` and `textkit.width.pad` treat every character as one terminal column, so tables containing CJK text, emoji or combining accents are misaligned.\n\nReproduction:\n\n    >>> from textkit.width import display_width, pad\n    >>> display_width(\"日本\")\n    2               # it occupies 4 columns in a terminal\n    >>> pad(\"日本\", 6)\n    '日本    '       # 8 columns wide instead of 6\n\nRequired behaviour for `display_width(text)`: return the sum of per-character widths, where a character is\n\n- 0 columns wide if it is a combining mark (non-zero canonical combining class) or a format character (Unicode general category `Cf`, for example U+200B ZERO WIDTH SPACE or U+200D ZERO WIDTH JOINER);\n- otherwise 2 columns wide if its East Asian Width property is `W` (wide) or `F` (fullwidth), which covers CJK ideographs, fullwidth forms and most emoji;\n- otherwise 1 column wide, including halfwidth and ambiguous-width characters.\n\nRequired behaviour for `pad(text, width, align=\"left\")`:\n\n- Padding is based on display width, so the result occupies exactly `width` columns. Text that already occupies `width` columns or more is returned unchanged.\n- `align` is `\"left\"`, `\"right\"` or `\"center\"`. When centring needs an odd number of padding spaces, the extra space goes on the right.\n- Any other `align` value raises `ValueError` (today it silently left-aligns).\n\nASCII behaviour covered by `tests/test_width.py` must not change.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "bug_fix",
+      "difficulty": "hard",
+      "tags": [
+        "unicode",
+        "bug-fix",
+        "terminal",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_display_width_unicode.py::test_wide_characters_take_two_columns",
+          "tests/test_acceptance_display_width_unicode.py::test_fullwidth_and_halfwidth_forms",
+          "tests/test_acceptance_display_width_unicode.py::test_emoji_is_wide",
+          "tests/test_acceptance_display_width_unicode.py::test_combining_marks_take_no_columns",
+          "tests/test_acceptance_display_width_unicode.py::test_zero_width_format_characters_take_no_columns",
+          "tests/test_acceptance_display_width_unicode.py::test_pad_wide_text_left_and_right",
+          "tests/test_acceptance_display_width_unicode.py::test_pad_counts_combining_marks_as_zero",
+          "tests/test_acceptance_display_width_unicode.py::test_wide_text_already_at_width_is_unchanged",
+          "tests/test_acceptance_display_width_unicode.py::test_center_puts_the_extra_space_on_the_right",
+          "tests/test_acceptance_display_width_unicode.py::test_unknown_alignment_raises_value_error"
+        ],
+        "pass_to_pass": [
+          "tests/test_width.py::test_ascii_width",
+          "tests/test_width.py::test_empty_width",
+          "tests/test_width.py::test_left_pad_is_default",
+          "tests/test_width.py::test_right_align",
+          "tests/test_width.py::test_center_even_gap",
+          "tests/test_width.py::test_text_wider_than_width_is_unchanged",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_display_width_unicode.py": {
+            "$file": "acceptance/textkit/display_width_unicode.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 900,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 60
+      },
+      "context_files": [
+        "src/textkit/width.py",
+        "tests/test_width.py"
+      ],
+      "acceptance_criteria": [
+        "Wide and fullwidth characters count as 2 columns",
+        "Combining marks and Cf format characters count as 0 columns",
+        "pad pads to display width, not code-point length",
+        "Odd centring puts the extra space on the right",
+        "Unknown align values raise ValueError",
+        "Existing tests in tests/test_width.py continue to pass"
+      ],
+      "hints": [
+        "unicodedata exposes the combining class, general category and East Asian Width of a character.",
+        "pad has its own copy of the width bug."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-line-range-inclusive",
+      "version": "1.0",
+      "title": "line_range is off by one",
+      "description": "line_range treats its 1-based line numbers as 0-based slice bounds, so it skips the first requested line.",
+      "problem_statement": "`textkit.lines.line_range(text, first, last)` is documented as returning lines `first` through `last` inclusive, numbered from 1, but it is off by one:\n\n    >>> from textkit.lines import line_range\n    >>> line_range(\"alpha\\nbeta\\ngamma\", 1, 2)\n    ['beta']\n\nExpected: ['alpha', 'beta']\n\nRequired behaviour:\n\n- Lines are numbered from 1 and both `first` and `last` are inclusive, so `line_range(text, n, n)` returns exactly line `n`.\n- A `last` beyond the end of the text is clamped to the final line.\n- Returned lines do not include their line endings (`\\n` or `\\r\\n`).\n\nMust not change: `first < 1` and `last < first` raise `ValueError`, and empty text yields `[]` (see `tests/test_lines.py`).",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "bug_fix",
+      "difficulty": "easy",
+      "tags": [
+        "bug-fix",
+        "off-by-one",
+        "boundary-conditions",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_line_range_inclusive.py::test_middle_range_is_inclusive",
+          "tests/test_acceptance_line_range_inclusive.py::test_single_first_line",
+          "tests/test_acceptance_line_range_inclusive.py::test_whole_text",
+          "tests/test_acceptance_line_range_inclusive.py::test_last_is_clamped_to_the_end",
+          "tests/test_acceptance_line_range_inclusive.py::test_single_line_text",
+          "tests/test_acceptance_line_range_inclusive.py::test_crlf_line_endings_are_not_included"
+        ],
+        "pass_to_pass": [
+          "tests/test_lines.py::test_first_must_be_positive",
+          "tests/test_lines.py::test_last_must_not_precede_first",
+          "tests/test_lines.py::test_empty_text_has_no_lines",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_line_range_inclusive.py": {
+            "$file": "acceptance/textkit/line_range_inclusive.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 600,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 40
+      },
+      "context_files": [
+        "src/textkit/lines.py",
+        "tests/test_lines.py"
+      ],
+      "acceptance_criteria": [
+        "first and last are 1-based and inclusive",
+        "last beyond the end is clamped",
+        "Line endings are not included",
+        "Existing tests in tests/test_lines.py continue to pass"
+      ],
+      "hints": [
+        "Convert the 1-based first line number to a 0-based slice start."
+      ],
+      "metadata": {
+        "author": "agentbench-lab",
+        "license": "MIT",
+        "repo_origin": "self-authored sample repository"
+      }
+    },
+    {
+      "task_id": "textkit-chunked-lazy",
+      "version": "1.0",
+      "title": "Make chunked a lazy iterator over any iterable",
+      "description": "chunked slices a sequence into a list of lists up front; refactor it to stream chunks lazily from any iterable while keeping eager argument validation.",
+      "problem_statement": "`textkit.chunks.chunked(items, size)` slices its input and builds every chunk up front, so it only works on sequences and cannot be used on large or unbounded streams:\n\n    >>> import itertools\n    >>> from textkit.chunks import chunked\n    >>> chunked((n for n in range(5)), 2)\n    TypeError: object of type 'generator' has no len()\n    >>> chunked(itertools.count(), 3)\n    TypeError: object of type 'itertools.count' has no len()\n\nRefactor it into a lazy iterator:\n\n- Accept any iterable, including generators, one-shot iterators and infinite iterators.\n- Return an iterator (not a list) that yields the chunks one at a time. Each chunk is a `list` of up to `size` elements; only the last one may be shorter.\n- Consume the source lazily: producing a chunk must not read more elements from the underlying iterator than that chunk contains.\n- Validation stays eager: `size < 1` must raise `ValueError` when `chunked` is called, not later when the result is first iterated.\n\nResults for sequences are otherwise unchanged (`list(chunked([1, 2, 3, 4, 5], 2)) == [[1, 2], [3, 4], [5]]`). `tests/test_chunks.py` must keep passing.",
+      "repo": {
+        "kind": "local_path",
+        "path": "textkit",
+        "revision": "local"
+      },
+      "category": "refactor",
+      "difficulty": "medium",
+      "tags": [
+        "refactor",
+        "iterators",
+        "laziness",
+        "python"
+      ],
+      "environment": {
+        "image": "agentbench/benchmark-python:3.12",
+        "setup_commands": [
+          "python -m pytest --version"
+        ],
+        "workdir": "/workspace/repo"
+      },
+      "tests": {
+        "runner": "pytest",
+        "command": "python -m pytest -p no:cacheprovider -q --tb=short {selection}",
+        "fail_to_pass": [
+          "tests/test_acceptance_chunked_lazy.py::test_accepts_a_generator",
+          "tests/test_acceptance_chunked_lazy.py::test_works_on_an_infinite_iterator",
+          "tests/test_acceptance_chunked_lazy.py::test_returns_an_iterator_not_a_list",
+          "tests/test_acceptance_chunked_lazy.py::test_consumes_the_source_only_as_needed",
+          "tests/test_acceptance_chunked_lazy.py::test_chunks_from_an_iterator_are_lists"
+        ],
+        "pass_to_pass": [
+          "tests/test_chunks.py::test_even_split",
+          "tests/test_chunks.py::test_last_chunk_may_be_short",
+          "tests/test_chunks.py::test_empty_input",
+          "tests/test_chunks.py::test_chunks_are_lists",
+          "tests/test_chunks.py::test_size_must_be_positive_at_call_time",
+          "tests/test_slug.py::test_lowercases_words"
+        ]
+      },
+      "grading": {
+        "version": "1.0",
+        "acceptance_tests": {
+          "tests/test_acceptance_chunked_lazy.py": {
+            "$file": "acceptance/textkit/chunked_lazy.py"
+          }
+        },
+        "require_non_empty_patch": true,
+        "verify_baseline": true,
+        "forbidden_paths": [
+          "tests/**",
+          "**/conftest.py",
+          "pytest.ini",
+          "setup.cfg",
+          "tox.ini",
+          "pyproject.toml"
+        ]
+      },
+      "limits": {
+        "agent_timeout_s": 900,
+        "setup_timeout_s": 180,
+        "test_timeout_s": 180,
+        "memory_mb": 1024,
+        "cpus": 1.0,
+        "network": "none",
+        "max_agent_steps": 60
+      },
+      "context_files": [
+        "src/textkit/chunks.py",
+        "tests/test_chunks.py"
+      ],
+      "acceptance_criteria": [
+        "Any iterable is accepted, including infinite iterators",
+        "An iterator of list chunks is returned",
+        "The source is consumed only as far as needed",
+        "size < 1 raises ValueError at call time",
+        "Existing tests in tests/test_chunks.py continue to pass"
+      ],
+      "hints": [
+        "itertools.islice takes a bounded number of items from any iterator.",
+        "A function containing yield does not run until it is first iterated."
       ],
       "metadata": {
         "author": "agentbench-lab",

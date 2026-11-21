@@ -243,6 +243,19 @@ def resource_snapshot() -> dict[str, Any]:
     }
 
 
+def memory_snapshot() -> tuple[dict[str, Any], dict[str, Any]]:
+    """Memory and swap only: the cheap probe used while runs execute (no CPU sampling)."""
+    via_psutil = _psutil_snapshot()
+    if via_psutil:
+        return via_psutil[0], via_psutil[1]
+    if sys.platform == "darwin":
+        return _darwin_memory()
+    if sys.platform.startswith("linux"):
+        return _linux_memory()
+    reason = f"memory metrics are not implemented for {sys.platform}"
+    return _unsupported(reason), _unsupported(reason)
+
+
 # --------------------------------------------------------------------------- #
 def _json_lines(text: str | None) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
