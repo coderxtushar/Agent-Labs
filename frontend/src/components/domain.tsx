@@ -11,10 +11,11 @@
  * - `SimulatedBadge` marks results produced by a non-model agent.
  */
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import type {
   LayerStatus,
+  PatchStats,
   Provenance,
   ProvenanceValue,
   Rate,
@@ -271,33 +272,312 @@ export function PartialBanner({
 }
 
 // --------------------------------------------------------------------------- //
-export function DiffView({ patch }: { patch: string }) {
-  const lines = patch.split("\n");
+interface DiffLineInfo {
+  text: string;
+  kind: "meta" | "file" | "hunk" | "add" | "del" | "context";
+  oldNo: number | null;
+  newNo: number | null;
+}
+
+function classifyDiffLines(lines: string[]): DiffLineInfo[] {
+  let oldNo = 0;
+  let newNo = 0;
+  let inHunk = false;
+  return lines.map((text) => {
+    if (text.startsWith("diff --git")) {
+      inHunk = false;
+      return { text, kind: "meta", oldNo: null, newNo: null };
+    }
+    if (text.startsWith("@@")) {
+      const match = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(text);
+      if (match) {
+        oldNo = Number(match[1]);
+        newNo = Number(match[2]);
+      }
+      inHunk = true;
+      return { text, kind: "hunk", oldNo: null, newNo: null };
+    }
+    if (!inHunk) {
+      const isFile = text.startsWith("+++") || text.startsWith("---");
+      return { text, kind: isFile ? "file" : "meta", oldNo: null, newNo: null };
+    }
+    if (text.startsWith("+")) {
+      newNo += 1;
+      return { text, kind: "add", oldNo: null, newNo: newNo - 1 };
+    }
+    if (text.startsWith("-")) {
+      oldNo += 1;
+      return { text, kind: "del", oldNo: oldNo - 1, newNo: null };
+    }
+    if (text.startsWith("\\")) return { text, kind: "meta", oldNo: null, newNo: null };
+    oldNo += 1;
+    newNo += 1;
+    return { text, kind: "context", oldNo: oldNo - 1, newNo: newNo - 1 };
+  });
+}
+
+const DIFF_LINE_CLASS: Record<DiffLineInfo["kind"], string> = {
+  meta: "muted font-semibold",
+  file: "muted",
+  hunk: "bg-[rgb(var(--accent)/0.08)] accent-text",
+  add: "bg-[rgb(var(--good)/0.1)] text-good",
+  del: "bg-[rgb(var(--bad)/0.1)] text-bad",
+  context: "",
+};
+
+/**
+ * A unified diff, coloured by line kind. `numbered` adds old/new line-number
+ * gutters derived from the hunk headers.
+ */
+export function DiffView({
+  patch,
+  numbered = false,
+  maxHeight = "max-h-[32rem]",
+  bare = false,
+}: {
+  patch: string;
+  numbered?: boolean;
+  maxHeight?: string;
+  /** Drop the outer border/background, for embedding inside another frame. */
+  bare?: boolean;
+}) {
+  const lines = classifyDiffLines(patch.split("\n"));
   return (
-    <pre className="surface-2 hairline max-h-[32rem] overflow-auto rounded-md border font-mono text-2xs leading-relaxed">
-      {lines.map((line, index) => {
-        const isMeta = line.startsWith("diff --git") || line.startsWith("index ");
-        const isHunk = line.startsWith("@@");
-        const isFile = line.startsWith("+++") || line.startsWith("---");
-        const isAdd = !isFile && line.startsWith("+");
-        const isDel = !isFile && line.startsWith("-");
-        return (
-          <div
-            key={index}
-            className={cx(
-              "px-3 whitespace-pre-wrap break-all",
-              isMeta && "muted font-semibold",
-              isFile && "muted",
-              isHunk && "bg-indigo-500/10 text-indigo-300",
-              isAdd && "bg-emerald-500/10 text-emerald-300",
-              isDel && "bg-rose-500/10 text-rose-300",
-            )}
-          >
-            {line === "" ? " " : line}
-          </div>
-        );
-      })}
+    <pre
+      className={cx(
+        "overflow-auto font-mono text-2xs leading-relaxed",
+        !bare && "surface-2 hairline rounded-md border",
+        maxHeight,
+      )}
+    >
+      {lines.map((line, index) => (
+        <div key={index} className={cx("flex", DIFF_LINE_CLASS[line.kind])}>
+          {numbered && (
+            <span
+              aria-hidden
+              className="subtle hairline tnum flex w-[5.5rem] shrink-0 select-none justify-between border-r px-2 text-right"
+            >
+              <span className="w-8">{line.oldNo ?? ""}</span>
+              <span className="w-8">{line.newNo ?? ""}</span>
+            </span>
+          )}
+          <span className="min-w-0 flex-1 whitespace-pre-wrap break-all px-3">
+            {line.text === "" ? " " : line.text}
+          </span>
+        </div>
+      ))}
     </pre>
+  );
+}
+
+interface DiffFile {
+  path: string;
+  change: string;
+  additions: number;
+  deletions: number;
+  text: string;
+}
+
+function splitDiffFiles(patch: string): DiffFile[] {
+  const files: DiffFile[] = [];
+  let current: (DiffFile & { lines: string[]; inHunk: boolean }) | null = null;
+  const flush = () => {
+    if (current) {
+      files.push({
+        path: current.path,
+        change: current.change,
+        additions: current.additions,
+        deletions: current.deletions,
+        text: current.lines.join("\n"),
+      });
+    }
+  };
+  for (const line of patch.split("\n")) {
+    if (line.startsWith("diff --git ")) {
+      flush();
+      const match = /^diff --git a\/(.+?) b\/(.+)$/.exec(line);
+      current = {
+        path: match ? match[2] : line.slice("diff --git ".length),
+        change: "modified",
+        additions: 0,
+        deletions: 0,
+        text: "",
+        lines: [],
+        inHunk: false,
+      };
+    }
+    if (!current) continue;
+    current.lines.push(line);
+    if (line.startsWith("@@")) {
+      current.inHunk = true;
+    } else if (!current.inHunk) {
+      if (line.startsWith("new file mode")) current.change = "added";
+      else if (line.startsWith("deleted file mode")) current.change = "deleted";
+      else if (line.startsWith("rename from")) current.change = "renamed";
+      else if (line.startsWith("Binary files")) current.change = "binary";
+      else if (line.startsWith("+++ ") && !line.endsWith("/dev/null")) {
+        current.path = line.slice(4).replace(/^b\//, "");
+      }
+    } else if (line.startsWith("+")) {
+      current.additions += 1;
+    } else if (line.startsWith("-")) {
+      current.deletions += 1;
+    }
+  }
+  flush();
+  return files;
+}
+
+const CHANGE_TONES: Record<string, BadgeTone> = {
+  added: "good",
+  deleted: "bad",
+  renamed: "info",
+  binary: "warn",
+  modified: "neutral",
+};
+
+/**
+ * Per-file view of a captured patch: file list with +/- counts, collapsible
+ * per-file diffs, and the capture metadata. Counts come from the recorded
+ * `patch_stats` when available and are parsed from the diff text otherwise.
+ */
+export function PatchViewer({
+  patch,
+  stats,
+}: {
+  patch: string;
+  stats?: PatchStats | null;
+}) {
+  const files = splitDiffFiles(patch);
+  const [open, setOpen] = useState<Set<string>>(
+    () => new Set(files.length <= 3 ? files.map((file) => file.path) : []),
+  );
+
+  if (files.length === 0) {
+    return <DiffView patch={patch} numbered />;
+  }
+
+  const statFor = (path: string) => stats?.paths.find((entry) => entry.path === path);
+  const rows = files.map((file) => {
+    const recorded = statFor(file.path);
+    return {
+      ...file,
+      change: recorded?.change ?? file.change,
+      plus: recorded ? recorded["+"] : file.additions,
+      minus: recorded ? recorded["-"] : file.deletions,
+      fromStats: Boolean(recorded),
+    };
+  });
+  const totalPlus = stats?.insertions ?? rows.reduce((sum, row) => sum + row.plus, 0);
+  const totalMinus = stats?.deletions ?? rows.reduce((sum, row) => sum + row.minus, 0);
+  const toggle = (path: string) =>
+    setOpen((current) => {
+      const next = new Set(current);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="tnum text-xs">
+          <span className="font-medium">
+            {stats?.files_changed ?? rows.length} file{(stats?.files_changed ?? rows.length) === 1 ? "" : "s"} changed
+          </span>
+          <span className="text-good ml-2">+{totalPlus}</span>
+          <span className="text-bad ml-1.5">−{totalMinus}</span>
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="muted rounded px-2 py-1 text-2xs font-medium hover:bg-[rgb(var(--surface-2))]"
+            onClick={() => setOpen(new Set(rows.map((row) => row.path)))}
+          >
+            Expand all
+          </button>
+          <button
+            type="button"
+            className="muted rounded px-2 py-1 text-2xs font-medium hover:bg-[rgb(var(--surface-2))]"
+            onClick={() => setOpen(new Set())}
+          >
+            Collapse all
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((row) => {
+          const isOpen = open.has(row.path);
+          const total = row.plus + row.minus;
+          return (
+            <div key={row.path} className="hairline overflow-hidden rounded-md border">
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                onClick={() => toggle(row.path)}
+                className="surface-2 flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[rgb(var(--surface-3))]"
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 16 16"
+                  className={cx("subtle h-3 w-3 shrink-0 transition-transform duration-150", isOpen && "rotate-90")}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path d="m6 4 4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <Badge tone={CHANGE_TONES[row.change] ?? "neutral"}>{row.change}</Badge>
+                <span className="min-w-0 flex-1 truncate font-mono text-2xs font-medium" title={row.path}>
+                  {row.path}
+                </span>
+                <span className="tnum shrink-0 font-mono text-2xs" title={row.fromStats ? "from recorded patch_stats" : "parsed from the diff text"}>
+                  <span className="text-good">+{row.plus}</span>{" "}
+                  <span className="text-bad">−{row.minus}</span>
+                </span>
+                <span aria-hidden className="hidden h-1.5 w-14 shrink-0 overflow-hidden rounded-full sm:flex">
+                  {total > 0 && (
+                    <>
+                      <span style={{ width: `${(row.plus / total) * 100}%`, backgroundColor: "rgb(var(--good))" }} />
+                      <span style={{ width: `${(row.minus / total) * 100}%`, backgroundColor: "rgb(var(--bad))" }} />
+                    </>
+                  )}
+                </span>
+              </button>
+              {isOpen && (
+                <div className="hairline border-t">
+                  <DiffView patch={row.text} numbered bare maxHeight="max-h-[36rem]" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {stats && (
+        <dl className="subtle flex flex-wrap gap-x-5 gap-y-1 text-2xs">
+          <div className="flex min-w-0 gap-1.5">
+            <dt>diff sha256</dt>
+            <dd className="muted min-w-0 truncate font-mono" title={stats.diff_sha256 ?? undefined}>
+              {stats.diff_sha256 ? `${stats.diff_sha256.slice(0, 16)}…` : "—"}
+            </dd>
+          </div>
+          <div className="flex gap-1.5">
+            <dt>truncated</dt>
+            <dd className={stats.truncated ? "text-warn" : "muted"}>
+              {stats.truncated ? "yes — stored diff is incomplete" : "no"}
+            </dd>
+          </div>
+          {stats.binary_files.length > 0 && (
+            <div className="flex min-w-0 gap-1.5">
+              <dt>binary files</dt>
+              <dd className="muted font-mono">{stats.binary_files.join(", ")}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+    </div>
   );
 }
 

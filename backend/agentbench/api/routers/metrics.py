@@ -14,13 +14,64 @@ from agentbench.db.models import ExperimentRecord, FailureAnnotationRecord, RunR
 from agentbench.metrics.compare import compare_experiments
 from agentbench.metrics.compute import platform_overview
 from agentbench.metrics.export import comparison_markdown
+from agentbench.metrics.insights import (
+    MAX_COMPARE_ARMS,
+    analytics,
+    compare_many,
+    leaderboard,
+    overview_extras,
+)
 
 router = APIRouter(tags=["metrics"])
 
 
 @router.get("/overview", summary="Platform overview computed from stored results")
 def overview_endpoint(session: DbSession) -> dict[str, Any]:
-    return platform_overview(session)
+    return {**platform_overview(session), **overview_extras(session)}
+
+
+def _id_list(raw: str | None) -> list[str]:
+    return [part.strip() for part in (raw or "").split(",") if part.strip()]
+
+
+@router.get("/leaderboard", summary="Agent leaderboard across experiments, grouped by provenance")
+def leaderboard_endpoint(
+    session: DbSession,
+    benchmark_id: Annotated[str | None, Query(max_length=80)] = None,
+    experiment_ids: Annotated[
+        str | None, Query(description="comma-separated experiment ids", max_length=2000)
+    ] = None,
+    include_non_model: Annotated[
+        bool, Query(description="include simulated and offline-adapter results")
+    ] = False,
+) -> dict[str, Any]:
+    return leaderboard(
+        session,
+        benchmark_id=benchmark_id or None,
+        experiment_ids=_id_list(experiment_ids) or None,
+        include_non_model=include_non_model,
+    )
+
+
+@router.get("/analytics", summary="Platform-wide activity, tool usage and runtime analytics")
+def analytics_endpoint(session: DbSession) -> dict[str, Any]:
+    return analytics(session)
+
+
+@router.get("/compare/matrix", summary="Side-by-side comparison of 2 to 6 experiments")
+def compare_matrix_endpoint(
+    session: DbSession,
+    experiment_ids: Annotated[str, Query(description="comma-separated experiment ids")],
+) -> dict[str, Any]:
+    ids = _id_list(experiment_ids)
+    if not 2 <= len(ids) <= MAX_COMPARE_ARMS:
+        raise bad_request(f"select between 2 and {MAX_COMPARE_ARMS} experiments")
+    if len(set(ids)) != len(ids):
+        raise bad_request("experiment ids must be distinct")
+    for identifier in ids:
+        if session.get(ExperimentRecord, identifier) is None:
+            raise not_found("experiment", identifier)
+    return compare_many(session, ids)
 
 
 @router.get("/compare", summary="Baseline vs candidate comparison")

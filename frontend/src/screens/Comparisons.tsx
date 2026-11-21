@@ -52,7 +52,7 @@ function signed(value: number | null, suffix = ""): string {
   return `${sign}${value}${suffix}`;
 }
 
-export default function Comparisons() {
+export default function Comparisons({ embedded = false }: { embedded?: boolean }) {
   const experiments = useExperiments();
   const [baseline, setBaseline] = useState("");
   const [candidate, setCandidate] = useState("");
@@ -62,7 +62,7 @@ export default function Comparisons() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-semibold">Comparisons</h1>
+      {!embedded && <h1 className="text-lg font-semibold">Comparisons</h1>}
 
       <Card
         title="Select two experiments"
@@ -158,7 +158,7 @@ export default function Comparisons() {
                   />
                   <KeyValue
                     rows={[
-                      ["Model", <Mono>{arm.model ?? "—"}</Mono>],
+                      ["Model", <Mono key="model">{arm.model ?? "—"}</Mono>],
                       ["Solved", arm.outcomes.solved],
                       ["Unsolved", arm.outcomes.unsolved],
                       ["Timeout", arm.outcomes.timeout],
@@ -169,7 +169,7 @@ export default function Comparisons() {
                           arm.outcomes.grading_error +
                           arm.outcomes.cancelled],
                       ["Runtime", formatDuration(arm.runtime.total_s)],
-                      ["Cost (USD)", <OptionalNumber value={arm.usage.cost_usd_total} />],
+                      ["Cost (USD)", <OptionalNumber key="cost" value={arm.usage.cost_usd_total} />],
                     ]}
                   />
                 </div>

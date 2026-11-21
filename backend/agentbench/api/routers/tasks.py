@@ -7,13 +7,17 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Query
 from fastapi.responses import PlainTextResponse
+from sqlalchemy import select
 
 from agentbench.api.deps import DbSession, Pagination, WriteAccess, bad_request, conflict, not_found
 from agentbench.api.schemas import (
     BenchmarkImportRequest,
     TaskEnableRequest,
+    serialize_run,
     serialize_task,
 )
+from agentbench.db.models import RunRecord
+from agentbench.metrics.insights import task_history
 from agentbench.registry.loader import (
     BenchmarkLoadError,
     load_benchmark_text,
@@ -92,6 +96,24 @@ def get_endpoint(
     if record is None:
         raise not_found("task", task_key)
     return serialize_task(record, include_spec=include_spec)
+
+
+@router.get("/{task_key}/history", summary="Runs of one task across agents and experiments")
+def history_endpoint(session: DbSession, task_key: str) -> dict[str, Any]:
+    record = get_task_by_key(session, task_key)
+    if record is None:
+        raise not_found("task", task_key)
+    history = task_history(session, record.task_id, record.version)
+    run_ids = history.pop("run_ids")
+    context = history.pop("run_context")
+    runs = {
+        run.id: run
+        for run in session.execute(select(RunRecord).where(RunRecord.id.in_(run_ids))).scalars()
+    }
+    history["runs"] = [
+        {**serialize_run(runs[run_id]), **context[run_id]} for run_id in run_ids if run_id in runs
+    ]
+    return history
 
 
 @router.post("/import", summary="Import a benchmark file", status_code=201)

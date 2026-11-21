@@ -7,6 +7,7 @@ import {
   KeyValue,
   LoadingTiles,
   Mono,
+  PageHeader,
   Table,
   Td,
   Th,
@@ -25,12 +26,23 @@ export default function Settings() {
   const unsafeSandbox = data.execution.sandbox_provider === "local_unsafe";
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-semibold">Settings</h1>
-      <p className="muted text-xs">
-        Read-only. Every value comes from the server's effective configuration. Change these with
-        environment variables and restart; see <Mono>.env.example</Mono>.
-      </p>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="System"
+        title="Settings"
+        description={
+          <>
+            Read-only. Every value comes from the server&apos;s effective configuration. Change these
+            with environment variables and restart; see <Mono>.env.example</Mono>.
+          </>
+        }
+        meta={
+          <>
+            <Badge tone="neutral">{data.env}</Badge>
+            <Badge tone="neutral">platform {data.versions.platform}</Badge>
+          </>
+        }
+      />
 
       {unsafeSandbox && (
         <div role="alert" className="rounded-lg border border-rose-500/40 bg-rose-500/5 p-3 text-xs">
@@ -60,14 +72,14 @@ export default function Settings() {
           <div className="p-4">
             <KeyValue
               rows={[
-                ["Sandbox provider", <Mono>{data.execution.sandbox_provider}</Mono>],
+                ["Sandbox provider", <Mono key="provider">{data.execution.sandbox_provider}</Mono>],
                 [
                   "Host-local provider allowed",
-                  <Badge tone={data.execution.local_unsafe_sandbox_allowed ? "bad" : "good"}>
+                  <Badge key="unsafe" tone={data.execution.local_unsafe_sandbox_allowed ? "bad" : "good"}>
                     {String(data.execution.local_unsafe_sandbox_allowed)}
                   </Badge>,
                 ],
-                ["Default image", <Mono>{data.execution.default_image}</Mono>],
+                ["Default image", <Mono key="image">{data.execution.default_image}</Mono>],
                 ["Max concurrent runs", data.execution.max_concurrent_runs],
                 ["Infra retry limit", data.execution.infra_retry_limit],
                 ["Run lease", `${data.execution.run_lease_seconds}s`],
@@ -116,14 +128,14 @@ export default function Settings() {
             <KeyValue
               rows={[
                 ["Environment", data.env],
-                ["Bind", <Mono>{`${data.api.host}:${data.api.port}`}</Mono>],
+                ["Bind", <Mono key="bind">{`${data.api.host}:${data.api.port}`}</Mono>],
                 [
                   "Auth required",
-                  <Badge tone={data.api.auth_required ? "good" : "warn"}>
+                  <Badge key="auth" tone={data.api.auth_required ? "good" : "warn"}>
                     {String(data.api.auth_required)}
                   </Badge>,
                 ],
-                ["CORS origins", <Mono>{data.api.cors_origins.join(", ") || "none"}</Mono>],
+                ["CORS origins", <Mono key="cors">{data.api.cors_origins.join(", ") || "none"}</Mono>],
                 ["Platform", data.versions.platform],
                 ["Task schema", data.versions.task_schema],
                 ["Grader implementation", data.versions.grader_implementation],
@@ -141,7 +153,7 @@ export default function Settings() {
           <KeyValue
             rows={Object.entries(data.credentials_present).map(([provider, present]) => [
               provider,
-              <Badge tone={present ? "good" : "neutral"}>
+              <Badge key={provider} tone={present ? "good" : "neutral"}>
                 {present ? "configured" : "not configured"}
               </Badge>,
             ])}

@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     allow_local_unsafe_sandbox: bool = False
 
     docker_binary: str = "docker"
+
+    #: Local Ollama server, read (GET only) by the Local Models and System
+    #: Monitor screens. Never used to pull, delete or stop models.
+    ollama_base_url: str = "http://127.0.0.1:11434"
     default_sandbox_image: str = "python:3.12-slim"
 
     #: Hard ceilings applied on top of per-task limits.  A task can request

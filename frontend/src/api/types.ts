@@ -580,6 +580,8 @@ export interface Overview {
   computed_at: string;
 }
 
+export type OverviewFull = Overview & OverviewExtras;
+
 export interface TaskDelta {
   task_key: string;
   title: string;
@@ -658,4 +660,327 @@ export interface FailureRow {
 
 export interface FailurePage extends Page<FailureRow> {
   distribution: Record<string, number>;
+}
+
+// --------------------------------------------------------------------------- //
+// insights (leaderboard, profiles, task history, analytics)
+// --------------------------------------------------------------------------- //
+export interface RuntimeStats {
+  n: number;
+  mean_s: number | null;
+  median_s: number | null;
+  p90_s: number | null;
+  min_s: number | null;
+  max_s: number | null;
+}
+
+/** Aggregate over a set of finished runs; rates exclude non-attributable outcomes. */
+export interface Tally {
+  finished_runs: number;
+  attributable_runs: number;
+  excluded_runs: number;
+  outcomes: Record<RunOutcome, number>;
+  tasks_attempted: number;
+  tasks_passed: number;
+  success_rate: Rate;
+  timeout_rate: Rate;
+  error_rate: Rate;
+  runtime: RuntimeStats;
+  last_finished_at: string | null;
+}
+
+export interface LeaderboardRow extends Tally {
+  position: number;
+  agent_config_id: string;
+  label: string;
+  name: string | null;
+  version: string | null;
+  model: string | null;
+  adapter: string | null;
+  provenance: Provenance;
+  benchmarks: string[];
+  experiment_count: number;
+  /** null for the leader and for rows without attributable runs. */
+  ci_overlaps_leader: boolean | null;
+}
+
+export interface Leaderboard {
+  rows: LeaderboardRow[];
+  ordering_note: string;
+  runtime_note: string;
+  warnings: string[];
+  claims_significance: false;
+  include_non_model: boolean;
+  hidden_non_model_experiments: number;
+  filters: {
+    benchmarks: string[];
+    experiments: {
+      id: string;
+      name: string;
+      agent: string;
+      benchmark: string;
+      provenance: ProvenanceValue;
+      created_at: string | null;
+    }[];
+  };
+  computed_at: string;
+}
+
+export interface ProfileTask extends Tally {
+  task_key: string;
+  task_id: string;
+  category: string;
+  provenance: ProvenanceValue;
+}
+
+export interface EvidenceItem {
+  task_key: string;
+  solved: number;
+  attempts: number;
+  evidence: string;
+}
+
+export interface AgentProfile {
+  agent: Agent;
+  agent_config_id: string;
+  summary: (Tally & { provenance: Provenance })[];
+  history: (Tally & {
+    experiment_id: string;
+    name: string;
+    state: ExperimentState;
+    benchmark: string;
+    provenance: ProvenanceValue;
+    repetitions: number;
+    created_at: string | null;
+    finished_at: string | null;
+  })[];
+  tasks: ProfileTask[];
+  by_category: (Tally & { provenance: ProvenanceValue; category: string })[];
+  durations: {
+    run_id: string;
+    task_key: string;
+    outcome: RunOutcome;
+    total_s: number;
+    provenance: ProvenanceValue;
+  }[];
+  failure_categories: Record<string, number>;
+  strengths: EvidenceItem[];
+  weaknesses: EvidenceItem[];
+  evidence_note: string;
+  runtime_note: string;
+  claims_significance: false;
+  computed_at: string;
+}
+
+export interface TaskHistory {
+  task_key: string;
+  total_runs: number;
+  finished_runs: number;
+  by_agent: (Tally & {
+    agent_config_id: string;
+    label: string;
+    model: string | null;
+    provenance: Provenance;
+  })[];
+  failure_categories: Record<string, number>;
+  patches: {
+    runs_with_patch: number;
+    runs_without_patch: number;
+    mean_files_changed: number | null;
+    mean_insertions: number | null;
+    mean_deletions: number | null;
+    paths_touched: { path: string; runs: number }[];
+  };
+  runs: (Run & { provenance: ProvenanceValue; failure_category: string | null })[];
+  claims_significance: false;
+}
+
+export interface MatrixCell {
+  attempts: number;
+  attributable: number;
+  solved: number;
+  outcomes: Partial<Record<RunOutcome, number>>;
+  rate: number | null;
+  mean_duration_s: number | null;
+}
+
+export interface CompareMatrix {
+  comparable: boolean;
+  blockers: string[];
+  caveats: string[];
+  arms: {
+    experiment_id: string;
+    name: string;
+    agent: string;
+    model: string | null;
+    benchmark: string;
+    grading_version: string;
+    repetitions: number;
+    provenance: Provenance;
+    completeness: ExperimentMetrics["completeness"];
+    outcomes: Record<RunOutcome, number>;
+    success_rate_attributable: Rate;
+    timeout_rate: Rate;
+    error_rate: Rate;
+    runtime: ExperimentMetrics["runtime"];
+    usage: ExperimentMetrics["usage"];
+    failure_categories: Record<string, number>;
+  }[];
+  tasks: {
+    task_key: string;
+    title: string;
+    category: string;
+    shared: boolean;
+    /** One cell per arm, in arm order; null when the arm did not include the task. */
+    cells: (MatrixCell | null)[];
+  }[];
+  shared_task_count: number;
+  statistical_note: Comparison["statistical_note"];
+  computed_at: string;
+}
+
+export interface Analytics {
+  daily: {
+    date: string;
+    model_runs: number;
+    non_model_runs: number;
+    outcomes: Partial<Record<RunOutcome, number>>;
+  }[];
+  by_provenance: (Tally & { provenance: Provenance })[];
+  by_category: (Tally & { category: string })[];
+  by_difficulty: (Tally & { difficulty: string })[];
+  duration_by_outcome: (RuntimeStats & { outcome: RunOutcome })[];
+  tokens_by_agent: {
+    agent: string;
+    provenance: ProvenanceValue;
+    runs_reported: number;
+    runs_unreported: number;
+    /** null = no provider reported usage (unknown, not zero). */
+    input_tokens: number | null;
+    output_tokens: number | null;
+  }[];
+  tools: {
+    by_tool: { tool: string; calls: number; failed_results: number; failure_rate: Rate }[];
+    runs_with_tool_events: number;
+    calls_per_run: { n: number; mean: number | null; median: number | null; max: number | null };
+  };
+  scope_note: string;
+  model_run_count: number;
+  finished_run_count: number;
+  claims_significance: false;
+  computed_at: string;
+}
+
+export interface OverviewExtras {
+  by_provenance: (Tally & { provenance: Provenance })[];
+  model_results: Tally;
+  /** Failure categories of non-solved model-result runs only (simulated excluded). */
+  model_failure_categories: Record<string, number>;
+  best_observed: {
+    agent_config_id: string;
+    label: string;
+    model: string | null;
+    success_rate: Rate;
+    /** null when there is no runner-up to compare against. */
+    distinguishable_from_runner_up: boolean | null;
+  } | null;
+  best_observed_note: string;
+}
+
+// --------------------------------------------------------------------------- //
+// host monitor
+// --------------------------------------------------------------------------- //
+export type Unsupported = { supported: false; reason: string };
+
+export interface Resources {
+  platform: { system: string; release: string; machine: string; python: string };
+  memory:
+    | {
+        supported: true;
+        total_bytes: number;
+        used_bytes: number;
+        available_bytes: number;
+        percent: number | null;
+        compressed_bytes?: number;
+        wired_bytes?: number;
+        pressure: "normal" | "warning" | "critical" | null;
+        source: string;
+      }
+    | Unsupported;
+  swap:
+    | { supported: true; total_bytes: number; used_bytes: number; percent: number | null; source: string }
+    | Unsupported;
+  cpu: {
+    cores: number;
+    load_average: number[] | null;
+    load_per_core: number | null;
+    utilization_percent: number | null;
+    utilization_note: string;
+  };
+  captured_at: string;
+}
+
+export interface DockerStatus {
+  available: boolean;
+  detail: string;
+  server_version?: string;
+  cpus?: number;
+  memory_bytes?: number;
+  containers_running?: number;
+  images?: number;
+  sandboxes: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    status: string | null;
+    run_id: string | null;
+    cpu_percent: string | null;
+    memory_usage: string | null;
+    memory_percent: string | null;
+  }[];
+}
+
+export interface LocalModelAgent {
+  agent_config_id: string;
+  label: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  results: {
+    provenance: ProvenanceValue;
+    success_rate: Rate;
+    attributable_runs: number;
+    experiment_count: number;
+    runtime: RuntimeStats;
+  }[];
+}
+
+export interface LocalModels {
+  reachable: boolean;
+  base_url: string;
+  version?: string;
+  detail: string;
+  running_count: number;
+  models: {
+    name: string;
+    size_bytes: number | null;
+    modified_at: string | null;
+    digest: string | null;
+    family: string | null;
+    parent_model: string | null;
+    parameter_size: string | null;
+    quantization: string | null;
+    format: string | null;
+    max_context_length: number | null;
+    capabilities: string[] | null;
+    running: boolean;
+    loaded: {
+      size_bytes: number | null;
+      vram_bytes: number | null;
+      context_length: number | null;
+      expires_at: string | null;
+    } | null;
+    agents: LocalModelAgent[];
+  }[];
+  agents_missing_model?: (LocalModelAgent & { model: string })[];
+  read_only_note?: string;
 }

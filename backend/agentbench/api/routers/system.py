@@ -12,6 +12,9 @@ from agentbench.adapters.registry import list_capabilities
 from agentbench.api.deps import AppSettings, DbSession
 from agentbench.db.models import AgentConfigRecord, ExperimentRecord, RunRecord, TaskRecord
 from agentbench.grading.engine import GRADER_IMPLEMENTATION_VERSION
+from agentbench.metrics.insights import leaderboard
+from agentbench.monitor.host import docker_status, resource_snapshot
+from agentbench.monitor.ollama import normalise_name, ollama_status
 from agentbench.sandbox.docker_sandbox import image_present
 from agentbench.sandbox.factory import all_provider_statuses, provider_status
 from agentbench.schemas.enums import FailureCategory, RunOutcome, RunState
@@ -132,3 +135,76 @@ def stats(session: DbSession) -> dict[str, Any]:
         "needs_agent": agents == 0,
         "has_results": runs > 0,
     }
+
+
+@router.get("/system/resources", summary="Host RAM, swap and CPU snapshot (read-only)")
+def resources_endpoint() -> dict[str, Any]:
+    return resource_snapshot()
+
+
+@router.get("/system/docker", summary="Docker daemon facts and live sandbox container stats")
+def docker_endpoint(settings: AppSettings) -> dict[str, Any]:
+    return docker_status(settings.docker_binary)
+
+
+@router.get("/system/local-models", summary="Installed and loaded Ollama models (read-only)")
+def local_models_endpoint(session: DbSession, settings: AppSettings) -> dict[str, Any]:
+    """Ollama's model list joined with the agent configs that use each model.
+
+    This endpoint never pulls, removes or unloads a model.
+    """
+    status = ollama_status(settings.ollama_base_url)
+    agents = list(session.execute(select(AgentConfigRecord)).scalars())
+    board = leaderboard(session, include_non_model=True)
+    rows_by_agent: dict[str, list[dict[str, Any]]] = {}
+    for row in board["rows"]:
+        rows_by_agent.setdefault(row["agent_config_id"], []).append(row)
+
+    installed = {normalise_name(m["name"]) for m in status["models"]}
+    by_model: dict[str, list[dict[str, Any]]] = {}
+    unresolved = []
+    for agent in agents:
+        base_url = str((agent.config or {}).get("base_url") or "")
+        model = str((agent.config or {}).get("model") or agent.model or "")
+        if agent.adapter != "openai_tools" or ":11434" not in base_url or not model:
+            continue
+        results = [
+            {
+                "provenance": row["provenance"]["value"],
+                "success_rate": row["success_rate"],
+                "attributable_runs": row["attributable_runs"],
+                "experiment_count": row["experiment_count"],
+                "runtime": row["runtime"],
+            }
+            for row in rows_by_agent.get(agent.id, [])
+        ]
+        entry = {
+            "agent_config_id": agent.id,
+            "label": f"{agent.name}@{agent.version}",
+            "enabled": agent.enabled,
+            "config": {
+                key: (agent.config or {}).get(key)
+                for key in (
+                    "model",
+                    "base_url",
+                    "max_tokens",
+                    "request_timeout_s",
+                    "request_retries",
+                )
+                if key in (agent.config or {})
+            },
+            "results": results,
+        }
+        key = normalise_name(model)
+        by_model.setdefault(key, []).append(entry)
+        if status["reachable"] and key not in installed:
+            unresolved.append({"model": model, **entry})
+
+    for item in status["models"]:
+        item["agents"] = by_model.get(normalise_name(item["name"]), [])
+    status["agents_missing_model"] = unresolved
+    status["read_only_note"] = (
+        "Agent Labs only reads Ollama. Pull, remove or stop models yourself with the "
+        "ollama CLI (`ollama pull`, `ollama rm`, `ollama stop`)."
+    )
+    return status

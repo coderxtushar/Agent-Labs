@@ -6,7 +6,16 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiGetText, apiPatch, apiPost } from "./client";
 import type {
   Agent,
+  AgentProfile,
   AdapterCapability,
+  Analytics,
+  CompareMatrix,
+  DockerStatus,
+  Leaderboard,
+  LocalModels,
+  OverviewFull,
+  Resources,
+  TaskHistory,
   BenchmarkSummary,
   Comparison,
   EventPage,
@@ -15,7 +24,6 @@ import type {
   FailurePage,
   Health,
   ImportReport,
-  Overview,
   Page,
   Progress,
   Run,
@@ -46,10 +54,10 @@ export const useCapabilities = (): UseQueryResult<SystemCapabilities> =>
     staleTime: 60_000,
   });
 
-export const useOverview = (): UseQueryResult<Overview> =>
+export const useOverview = (): UseQueryResult<OverviewFull> =>
   useQuery({
     queryKey: ["overview"],
-    queryFn: () => apiGet<Overview>("/overview"),
+    queryFn: () => apiGet<OverviewFull>("/overview"),
     refetchInterval: (query) => ((query.state.data?.runs.active ?? 0) > 0 ? ACTIVE_POLL_MS : false),
   });
 
@@ -318,4 +326,87 @@ export const useFailures = (filters: FailureFilters): UseQueryResult<FailurePage
   useQuery({
     queryKey: ["failures", filters],
     queryFn: () => apiGet<FailurePage>("/failures", { ...filters }),
+  });
+
+// --- insights -------------------------------------------------------------- //
+export interface LeaderboardFilters {
+  benchmark_id?: string;
+  experiment_ids?: string[];
+  include_non_model?: boolean;
+}
+
+export const useLeaderboard = (filters: LeaderboardFilters): UseQueryResult<Leaderboard> =>
+  useQuery({
+    queryKey: ["leaderboard", filters],
+    queryFn: () =>
+      apiGet<Leaderboard>("/leaderboard", {
+        benchmark_id: filters.benchmark_id,
+        experiment_ids: filters.experiment_ids?.join(","),
+        include_non_model: filters.include_non_model,
+      }),
+  });
+
+export const useAgentProfile = (id: string | undefined): UseQueryResult<AgentProfile> =>
+  useQuery({
+    queryKey: ["agent-profile", id],
+    queryFn: () => apiGet<AgentProfile>(`/agents/${id as string}/profile`),
+    enabled: Boolean(id),
+  });
+
+export const useTaskHistory = (taskKey: string | undefined): UseQueryResult<TaskHistory> =>
+  useQuery({
+    queryKey: ["task-history", taskKey],
+    queryFn: () => apiGet<TaskHistory>(`/tasks/${encodeURIComponent(taskKey as string)}/history`),
+    enabled: Boolean(taskKey),
+  });
+
+export const useCompareMatrix = (ids: string[]): UseQueryResult<CompareMatrix> =>
+  useQuery({
+    queryKey: ["compare-matrix", ids],
+    queryFn: () => apiGet<CompareMatrix>("/compare/matrix", { experiment_ids: ids.join(",") }),
+    enabled: ids.length >= 2,
+  });
+
+export const useAnalytics = (): UseQueryResult<Analytics> =>
+  useQuery({ queryKey: ["analytics"], queryFn: () => apiGet<Analytics>("/analytics") });
+
+export interface RunFilters {
+  experiment_id?: string;
+  outcome?: string;
+  state?: string;
+  task_id?: string;
+  active_only?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export const useRuns = (filters: RunFilters): UseQueryResult<Page<Run>> =>
+  useQuery({
+    queryKey: ["runs", filters],
+    queryFn: () => apiGet<Page<Run>>("/runs", { limit: 50, ...filters }),
+    refetchInterval: (query) =>
+      query.state.data?.items.some((run) => !run.is_terminal) ? ACTIVE_POLL_MS : false,
+  });
+
+// --- host monitor (read-only) ---------------------------------------------- //
+export const useResources = (live = true): UseQueryResult<Resources> =>
+  useQuery({
+    queryKey: ["resources"],
+    queryFn: () => apiGet<Resources>("/system/resources"),
+    refetchInterval: live ? 5000 : false,
+  });
+
+export const useDockerStatus = (live = true): UseQueryResult<DockerStatus> =>
+  useQuery({
+    queryKey: ["docker-status"],
+    queryFn: () => apiGet<DockerStatus>("/system/docker"),
+    refetchInterval: live ? 10_000 : false,
+  });
+
+export const useLocalModels = (live = false): UseQueryResult<LocalModels> =>
+  useQuery({
+    queryKey: ["local-models"],
+    queryFn: () => apiGet<LocalModels>("/system/local-models"),
+    refetchInterval: live ? 15_000 : false,
+    staleTime: 10_000,
   });

@@ -16,6 +16,7 @@ from agentbench.adapters.registry import (
 from agentbench.api.deps import DbSession, Pagination, WriteAccess, bad_request, conflict, not_found
 from agentbench.api.schemas import AgentCreateRequest, AgentEnableRequest
 from agentbench.db.models import AgentConfigRecord
+from agentbench.metrics.insights import agent_profile
 from agentbench.registry.agents import (
     AgentConflict,
     delete_agent,
@@ -65,6 +66,14 @@ def get_endpoint(session: DbSession, agent_id: str) -> dict[str, Any]:
     if record is None:
         raise not_found("agent configuration", agent_id)
     return describe(record)
+
+
+@router.get("/{agent_id}/profile", summary="Evidence-based performance profile of one agent")
+def profile_endpoint(session: DbSession, agent_id: str) -> dict[str, Any]:
+    record = session.get(AgentConfigRecord, agent_id)
+    if record is None:
+        raise not_found("agent configuration", agent_id)
+    return {"agent": describe(record), **agent_profile(session, agent_id)}
 
 
 @router.post("", summary="Register an agent configuration", status_code=201)

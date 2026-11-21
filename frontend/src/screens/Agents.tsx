@@ -19,6 +19,7 @@ import {
   LoadingRows,
   Modal,
   Mono,
+  PageHeader,
   Table,
   Td,
   Th,
@@ -32,7 +33,7 @@ function ReadinessRow({ agent }: { agent: Agent }) {
       <Badge tone={ready ? "good" : "warn"}>{ready ? "ready" : "not ready"}</Badge>
       <p className="muted mt-1 break-words text-2xs">{detail}</p>
       {missing.length > 0 && (
-        <p className="mt-0.5 text-2xs text-amber-400">
+        <p className="text-warn mt-0.5 text-2xs">
           missing: {missing.map((item) => <Mono key={item}>{item} </Mono>)}
         </p>
       )}
@@ -73,7 +74,7 @@ function CapabilityMatrix({ adapters }: { adapters: AdapterCapability[] }) {
             {flags.map((flag) => (
               <Td key={flag.key} className="text-center">
                 {adapter[flag.key] ? (
-                  <span className="text-emerald-400" aria-label="yes">
+                  <span className="text-good" aria-label="yes">
                     ✓
                   </span>
                 ) : (
@@ -226,17 +227,17 @@ export default function Agents() {
   const [creating, setCreating] = useState(false);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold">Agents</h1>
-        <Button
-          variant="primary"
-          disabled={!adapters.data}
-          onClick={() => setCreating(true)}
-        >
-          Register agent
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="System"
+        title="Agent configs"
+        description="Immutable, versioned agent configurations. To change one, register a new version so past results stay interpretable."
+        actions={
+          <Button variant="primary" disabled={!adapters.data} onClick={() => setCreating(true)}>
+            Register agent
+          </Button>
+        }
+      />
 
       {(setEnabled.isError || remove.isError) && (
         <ErrorState error={setEnabled.error ?? remove.error} />
@@ -273,7 +274,7 @@ export default function Agents() {
             </thead>
             <tbody>
               {agents.data.items.map((agent) => (
-                <tr key={agent.id} className="hover:surface-2">
+                <tr key={agent.id} className="row-hover">
                   <Td>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Mono className="font-semibold">{agent.label}</Mono>

@@ -23,11 +23,11 @@ export function Card({
   actions?: ReactNode;
 }) {
   return (
-    <section className={cx("surface rounded-lg border", className)}>
+    <section className={cx("surface elevated min-w-0 rounded-xl border", className)}>
       {(title || actions) && (
-        <header className="hairline flex items-start justify-between gap-4 border-b px-4 py-3">
+        <header className="hairline flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b px-4 py-3">
           <div className="min-w-0">
-            {title && <h2 className="truncate text-sm font-semibold">{title}</h2>}
+            {title && <h2 className="truncate text-[13px] font-semibold tracking-tight">{title}</h2>}
             {subtitle && <p className="muted mt-0.5 text-xs">{subtitle}</p>}
           </div>
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -40,7 +40,7 @@ export function Card({
 
 const BADGE_TONES = {
   neutral: "surface-2 muted hairline border",
-  accent: "border border-indigo-500/30 bg-indigo-500/10 text-indigo-400",
+  accent: "accent-soft-bg accent-text border border-transparent",
   good: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
   bad: "border border-rose-500/30 bg-rose-500/10 text-rose-400",
   warn: "border border-amber-500/30 bg-amber-500/10 text-amber-400",
@@ -64,7 +64,7 @@ export function Badge({
     <span
       title={title}
       className={cx(
-        "inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-2xs font-medium",
+        "inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-2xs font-medium leading-4",
         BADGE_TONES[tone],
         className,
       )}
@@ -75,10 +75,10 @@ export function Badge({
 }
 
 const BUTTON_VARIANTS = {
-  primary: "accent-bg text-white hover:opacity-90 disabled:opacity-40",
-  secondary: "surface-2 hairline border hover:opacity-80 disabled:opacity-40",
+  primary: "accent-bg hover:opacity-90 disabled:opacity-40",
+  secondary: "surface-2 hairline border hover:border-[rgb(var(--border-strong))] disabled:opacity-40",
   danger: "border border-rose-500/40 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 disabled:opacity-40",
-  ghost: "muted hover:opacity-70 disabled:opacity-40",
+  ghost: "muted hover:bg-[rgb(var(--surface-2))] disabled:opacity-40",
 } as const;
 
 export function Button({
@@ -105,7 +105,7 @@ export function Button({
       onClick={onClick}
       disabled={disabled}
       className={cx(
-        "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 disabled:cursor-not-allowed",
         BUTTON_VARIANTS[variant],
         className,
       )}
@@ -148,26 +148,28 @@ export function StatTile({
   tone?: BadgeTone;
 }) {
   return (
-    <div className="surface hairline rounded-lg border p-4">
-      <p className="muted text-2xs font-medium uppercase tracking-wide">{label}</p>
+    <div className="surface elevated hairline rounded-xl border p-4">
+      <p className="eyebrow">{label}</p>
       <p
         className={cx(
-          "tnum mt-1.5 text-2xl font-semibold",
-          tone === "good" && "text-emerald-400",
-          tone === "bad" && "text-rose-400",
-          tone === "warn" && "text-amber-400",
+          "tnum mt-2 text-[26px] font-semibold leading-none tracking-tight",
+          tone === "good" && "text-good",
+          tone === "bad" && "text-bad",
+          tone === "warn" && "text-warn",
         )}
       >
         {value}
       </p>
-      {hint && <p className="muted mt-1 text-xs">{hint}</p>}
+      {hint && <div className="muted mt-2 text-xs">{hint}</div>}
     </div>
   );
 }
 
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="overflow-x-auto">
+    // `relative` keeps absolutely-positioned descendants (sr-only labels) inside
+    // the scroll container; otherwise they widen the whole page on mobile.
+    <div className="relative overflow-x-auto">
       <table className={cx("w-full border-collapse text-left text-xs", className)}>{children}</table>
     </div>
   );
@@ -178,7 +180,7 @@ export function Th({ children, className }: { children?: ReactNode; className?: 
     <th
       scope="col"
       className={cx(
-        "muted hairline whitespace-nowrap border-b px-3 py-2 text-2xs font-semibold uppercase tracking-wide",
+        "subtle hairline whitespace-nowrap border-b px-3 py-2 text-2xs font-medium uppercase tracking-[0.06em]",
         className,
       )}
     >
@@ -275,7 +277,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="hairline flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-12 text-center">
+    <div className="hairline flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-12 text-center">
       <p className="text-sm font-medium">{title}</p>
       {description && <div className="muted max-w-xl text-xs">{description}</div>}
       {action && <div className="mt-2">{action}</div>}
@@ -338,7 +340,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="muted text-2xs font-semibold uppercase tracking-wide">{label}</span>
+      <span className="eyebrow">{label}</span>
       <div className="mt-1">{children}</div>
       {hint && <span className="muted mt-1 block text-2xs">{hint}</span>}
     </label>
@@ -346,7 +348,7 @@ export function Field({
 }
 
 export const inputClass =
-  "surface-2 hairline w-full rounded-md border px-2.5 py-1.5 text-xs outline-none placeholder:opacity-50";
+  "surface-2 hairline w-full rounded-md border px-2.5 py-1.5 text-xs outline-none transition-colors placeholder:opacity-50 hover:border-[rgb(var(--border-strong))] focus:border-[rgb(var(--accent)/0.6)]";
 
 export function CodeBlock({
   children,
@@ -427,10 +429,199 @@ export function KeyValue({ rows }: { rows: [string, ReactNode][] }) {
     <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
       {rows.map(([key, value]) => (
         <div key={key} className="min-w-0">
-          <dt className="muted text-2xs font-semibold uppercase tracking-wide">{key}</dt>
+          <dt className="eyebrow">{key}</dt>
           <dd className="tnum mt-0.5 break-words text-xs">{value}</dd>
         </div>
       ))}
     </dl>
   );
+}
+
+// --------------------------------------------------------------------------- //
+export function PageHeader({
+  title,
+  description,
+  actions,
+  eyebrow,
+  meta,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  eyebrow?: ReactNode;
+  meta?: ReactNode;
+}) {
+  return (
+    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+      <div className="min-w-0 max-w-3xl">
+        {eyebrow && <div className="eyebrow mb-1.5">{eyebrow}</div>}
+        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+        {description && <p className="muted mt-1 text-[13px] leading-relaxed">{description}</p>}
+        {meta && <div className="mt-2 flex flex-wrap items-center gap-1.5">{meta}</div>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </header>
+  );
+}
+
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: { value: T; label: ReactNode; title?: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="surface-2 hairline inline-flex rounded-lg border p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={value === option.value}
+          title={option.title}
+          onClick={() => onChange(option.value)}
+          className={cx(
+            "rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150",
+            value === option.value ? "surface elevated" : "muted hover:text-[rgb(var(--text))]",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = "Search",
+  label = "Search",
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cx("relative", className)}>
+      <svg
+        aria-hidden
+        viewBox="0 0 16 16"
+        className="subtle pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      >
+        <circle cx="7" cy="7" r="4.5" />
+        <path d="m10.5 10.5 3 3" strokeLinecap="round" />
+      </svg>
+      <input
+        type="search"
+        aria-label={label}
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className={cx(inputClass, "pl-8")}
+      />
+    </div>
+  );
+}
+
+export function Select({
+  value,
+  onChange,
+  options,
+  label,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  label: string;
+  className?: string;
+}) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={cx(inputClass.replace("w-full", "w-auto max-w-full"), "cursor-pointer pr-7", className)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/** A quiet explanatory line, for methodology notes that must stay visible. */
+export function Note({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "warn" | "info" }) {
+  return (
+    <p
+      className={cx(
+        "flex gap-2 text-xs leading-relaxed",
+        tone === "warn" ? "text-warn" : tone === "info" ? "text-info" : "muted",
+      )}
+    >
+      <svg aria-hidden viewBox="0 0 16 16" className="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="8" cy="8" r="6.25" />
+        <path d="M8 7.25v4M8 4.75v.5" strokeLinecap="round" />
+      </svg>
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/** Horizontal meter. `value` is 0-100; `null` renders an explicit "not available". */
+export function Meter({
+  value,
+  tone = "accent",
+  label,
+}: {
+  value: number | null | undefined;
+  tone?: "accent" | "good" | "warn" | "bad";
+  label: string;
+}) {
+  if (value === null || value === undefined) {
+    return <div className="subtle text-2xs">not available</div>;
+  }
+  const color =
+    tone === "good" ? "var(--good)" : tone === "warn" ? "var(--warn)" : tone === "bad" ? "var(--bad)" : "var(--accent)";
+  return (
+    <div
+      role="meter"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(value)}
+      className="surface-3 h-1.5 w-full overflow-hidden rounded-full"
+    >
+      <div
+        className="h-full rounded-full transition-[width] duration-500 ease-out"
+        style={{ width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: `rgb(${color})` }}
+      />
+    </div>
+  );
+}
+
+export function formatBytes(bytes: number | null | undefined): string {
+  if (bytes === null || bytes === undefined) return "—";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toFixed(value >= 100 || unit === 0 ? 0 : 1)} ${units[unit]}`;
 }

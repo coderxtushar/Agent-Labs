@@ -1,32 +1,57 @@
-import { createBrowserRouter } from "react-router-dom";
+import { Suspense, lazy, type ReactNode } from "react";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 
 import Layout from "./components/Layout";
-import Agents from "./screens/Agents";
-import Benchmarks from "./screens/Benchmarks";
-import Comparisons from "./screens/Comparisons";
-import ExperimentDetail from "./screens/ExperimentDetail";
-import Experiments from "./screens/Experiments";
-import Failures from "./screens/Failures";
-import NotFound from "./screens/NotFound";
-import Overview from "./screens/Overview";
-import RunDetail from "./screens/RunDetail";
-import Settings from "./screens/Settings";
+import { LoadingRows } from "./components/ui";
+
+const Agents = lazy(() => import("./screens/Agents"));
+const Analytics = lazy(() => import("./screens/Analytics"));
+const Benchmarks = lazy(() => import("./screens/Benchmarks"));
+const CompareStudio = lazy(() => import("./screens/CompareStudio"));
+const ExperimentDetail = lazy(() => import("./screens/ExperimentDetail"));
+const Experiments = lazy(() => import("./screens/Experiments"));
+const Failures = lazy(() => import("./screens/Failures"));
+const Leaderboard = lazy(() => import("./screens/Leaderboard"));
+const LocalModels = lazy(() => import("./screens/LocalModels"));
+const ModelProfile = lazy(() => import("./screens/ModelProfile"));
+const NotFound = lazy(() => import("./screens/NotFound"));
+const Overview = lazy(() => import("./screens/Overview"));
+const RunDetail = lazy(() => import("./screens/RunDetail"));
+const Settings = lazy(() => import("./screens/Settings"));
+const SystemMonitor = lazy(() => import("./screens/SystemMonitor"));
+const TaskDetail = lazy(() => import("./screens/TaskDetail"));
+const Trajectories = lazy(() => import("./screens/Trajectories"));
+
+function page(node: ReactNode) {
+  return <Suspense fallback={<LoadingRows rows={6} label="Loading page" />}>{node}</Suspense>;
+}
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
     children: [
-      { index: true, element: <Overview /> },
-      { path: "benchmarks", element: <Benchmarks /> },
-      { path: "agents", element: <Agents /> },
-      { path: "experiments", element: <Experiments /> },
-      { path: "experiments/:experimentId", element: <ExperimentDetail /> },
-      { path: "runs/:runId", element: <RunDetail /> },
-      { path: "comparisons", element: <Comparisons /> },
-      { path: "failures", element: <Failures /> },
-      { path: "settings", element: <Settings /> },
-      { path: "*", element: <NotFound /> },
+      { index: true, element: page(<Overview />) },
+      // workspace
+      { path: "leaderboard", element: page(<Leaderboard />) },
+      { path: "leaderboard/:agentId", element: page(<ModelProfile />) },
+      { path: "experiments", element: page(<Experiments />) },
+      { path: "experiments/:experimentId", element: page(<ExperimentDetail />) },
+      { path: "compare", element: page(<CompareStudio />) },
+      { path: "comparisons", element: <Navigate to="/compare" replace /> },
+      { path: "benchmarks", element: page(<Benchmarks />) },
+      { path: "benchmarks/tasks/:taskKey", element: page(<TaskDetail />) },
+      // analysis
+      { path: "trajectories", element: page(<Trajectories />) },
+      { path: "runs/:runId", element: page(<RunDetail />) },
+      { path: "failures", element: page(<Failures />) },
+      { path: "analytics", element: page(<Analytics />) },
+      // system
+      { path: "models", element: page(<LocalModels />) },
+      { path: "agents", element: page(<Agents />) },
+      { path: "system", element: page(<SystemMonitor />) },
+      { path: "settings", element: page(<Settings />) },
+      { path: "*", element: page(<NotFound />) },
     ],
   },
 ]);

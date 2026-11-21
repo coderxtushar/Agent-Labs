@@ -1,15 +1,23 @@
-# AgentBench Lab
+# Agent Labs
 
-Reproducible evaluation, benchmarking and failure analysis for AI coding agents.
+**Prove. Measure. Improve.**
+
+An open, local-first laboratory for evaluating coding agents through real
+execution, reproducible experiments, and evidence-driven benchmarking.
 
 Give it a benchmark of real software-engineering tasks and an agent, and it will
 run the agent in an isolated container, grade the result with tests the agent
 never sees, record everything it observably did, and tell you *why* it failed —
 distinguishing a wrong patch from a crashed harness from a dead Docker daemon.
+It runs free local models through Ollama on a laptop; no paid API is required.
 
 The design premise is **evidence over assertion**. An agent never reports its
 own success, every rate carries its denominator, and a number that cannot be
 computed honestly is reported as missing rather than guessed.
+
+![Agent Labs overview](frontend/screenshots/01-overview.png)
+
+> The Python package and CLI keep their original name, `agentbench`.
 
 ---
 
@@ -43,18 +51,67 @@ uv venv && uv pip install -e '.[dev]'      # or: python -m venv .venv && pip ins
 Then the web UI:
 
 ```bash
-cd backend && .venv/bin/python -m agentbench.cli.main serve   # API on :8000
-cd frontend && npm install && npm run dev                      # UI on :5173
+cd backend && AGENTBENCH_API_PORT=8077 .venv/bin/python -m agentbench.cli.main serve   # API on :8077
+cd frontend && npm install && npm run dev                                              # UI on :5173
 ```
 
-Point the UI at the API with `frontend/.env.development`:
+The checked-in `frontend/.env.development` points the UI at
+`http://127.0.0.1:8077/api/v1`. To use the default API port (8000) instead,
+start `serve` without `AGENTBENCH_API_PORT` and change that file to
+`VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1`.
 
-```
-VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
-```
+For the Local Models and System Monitor screens, run Docker Desktop and
+Ollama (`ollama serve`, or `brew services start ollama` to keep it running).
+Both screens only read; `AGENTBENCH_OLLAMA_BASE_URL` changes where Ollama is
+looked for (default `http://127.0.0.1:11434`).
 
 Copy `.env.example` to `.env` to configure anything else. It contains
 placeholders only; never commit a filled-in copy.
+
+---
+
+## A tour of the app
+
+The UI is a dark-first React app grouped into **Workspace**, **Analysis** and
+**System**. Every number on it comes from the API; nothing is hard-coded, and
+simulated pipeline checks are labelled and kept out of model headline numbers.
+
+| Screen | What it shows |
+| --- | --- |
+| **Overview** | Experiments, runs, model-only success rate with its interval, highest-observed model (and whether it is distinguishable from the runner-up), runtime, solved / failed / excluded runs, results by provenance, failure distribution, recent runs and experiments. |
+| **Leaderboard** | One row per agent config × provenance: tasks attempted and passed, success rate with 95% Wilson interval, mean/median runtime, timeout and agent-error rates. Filter by benchmark suite and experiments; simulated results are hidden unless asked for. Rows whose interval overlaps the leader's are marked "≈ leader". |
+| **Model profile** | Performance history with interval band, task-level results, strengths and weaknesses quoted from evidence ("solved 1 of 1 attributable attempt(s)"), runtime histogram, failure categories. |
+| **Experiments** | Searchable, filterable, sortable explorer; detail page with results, runs, configuration and a **Reproducibility** tab (seed, versions, config snapshot, CLI command). |
+| **Compare** | 2–6 experiments side by side with comparability blockers, caveats, arm summaries and a task × arm outcome matrix; a pairwise mode adds the two-proportion test when there is enough data. |
+| **Benchmarks** | Task library with validation status and timeouts; task pages show the spec, environment, grading requirements, baseline validation, run history, failure patterns and patch statistics. |
+| **Trajectories** | Every run, and for each run an ordered timeline of recorded events (model requests/responses with token usage, tool calls paired with their results, commands, file reads/writes, retries, errors, grading layers), a raw JSON view, and a patch viewer that separates *generated* from *validated*. |
+| **Failures** | Failure buckets (timeouts, incorrect patches, regressions, tool errors, infrastructure, test tampering, grading errors, other) with raw categories visible; unclassified failures stay "unclassified". Drill down to runs. |
+| **Analytics** | Daily activity, success by provenance / category / difficulty, duration by outcome, token usage, tool-call failure rates. |
+| **Local Models** | Installed and loaded Ollama models, their size, quantization and context, the agent configs that use them, and those configs' results. Read-only: commands to pull/remove/stop are copy-only. |
+| **System Monitor** | RAM, swap, CPU, load, memory pressure, Docker daemon and live sandbox-container stats, Ollama, active runs. Unsupported metrics are labelled, not estimated. |
+
+| | |
+| --- | --- |
+| ![Leaderboard](frontend/screenshots/02-leaderboard.png) | ![Model profile](frontend/screenshots/03-model-profile.png) |
+| ![Trajectory](frontend/screenshots/09-trajectory.png) | ![Compare](frontend/screenshots/06-compare.png) |
+| ![Local models](frontend/screenshots/13-local-models.png) | ![System monitor](frontend/screenshots/14-system-monitor.png) |
+
+All screenshots, including the light theme and a 390px phone view, are in
+`frontend/screenshots/`.
+
+### Reading results
+
+- **Success rate** = solved ÷ *attributable* runs (solved, unsolved, timeout,
+  agent error). Infrastructure errors, invalid tasks, grading errors and
+  cancellations are excluded and shown separately — they are not agent failures.
+- **Every rate shows n.** `66.7% (2/3)` with `95% CI 21–94%` means the true
+  rate could plausibly be anywhere in that range. With fewer than 30 runs the UI
+  says so; with overlapping intervals it will not call one agent better.
+- **Provenance.** `live model` results come from a real model call; `simulated`
+  and `offline adapter test` results validate the harness and are never model
+  scores.
+- **Unknown is not zero.** Unreported tokens or cost show "not reported", and a
+  failure no rule could classify stays "unclassified".
 
 ---
 
@@ -191,11 +248,11 @@ hidden tests while breaking a pre-existing one), `no-op`, and `test-tamperer`
 ```
 frontend/ (React + TS)  →  backend/agentbench/api/ (FastAPI)
                                  │
-         ┌───────────────────────┼────────────────────────┐
-     registry/              orchestrator/             metrics/
-  schema, loader,      workspace, runner,        compute, compare,
-  service, validator,  experiment, worker        failure, export
-  agents                       │
+         ┌───────────────────────┼────────────────────────┬──────────────┐
+     registry/              orchestrator/             metrics/          monitor/
+  schema, loader,      workspace, runner,        compute, compare,   host (RAM/swap/
+  service, validator,  experiment, worker        failure, export,    CPU, Docker),
+  agents                       │                 insights            ollama (read-only)
                      ┌─────────┴──────────┐
                  adapters/            grading/
              base, mock, scripted,  engine, patch,
@@ -211,6 +268,9 @@ frontend/ (React + TS)  →  backend/agentbench/api/ (FastAPI)
 
 Dependencies point downward only: grading does not know which adapter ran,
 adapters do not know how grading works, and neither touches the database.
+`metrics/insights.py` (leaderboard, profiles, task history, multi-arm compare,
+analytics) and `monitor/` (host, Docker and Ollama status) are read-only: they
+never change a result, a model or a container.
 
 `docs/architecture.md` has the full run lifecycle, the grading rules, the
 concurrency model and the extension points. `docs/security.md` has the threat
@@ -237,8 +297,11 @@ agentbench worker                        # standalone worker
 
 ## API
 
-`http://127.0.0.1:8000/docs` for interactive docs; 40 endpoints under
-`/api/v1`. Highlights: `GET /overview`, `GET /compare`, `GET /failures`,
+`http://127.0.0.1:8000/docs` for interactive docs; 48 endpoints under
+`/api/v1`. Highlights: `GET /overview`, `GET /leaderboard`,
+`GET /agents/{id}/profile`, `GET /tasks/{key}/history`, `GET /compare`,
+`GET /compare/matrix?experiment_ids=a,b,c`, `GET /analytics`, `GET /failures`,
+`GET /system/{resources,docker,local-models}` (read-only host status),
 `POST /tasks/import`, `POST /tasks/{key}/validate`, `POST /experiments`,
 `POST /experiments/{id}/{launch,cancel,resume}`,
 `GET /experiments/{id}/{metrics,runs,report}`, `GET /runs/{id}`,
@@ -396,7 +459,7 @@ Python 3.12.15, Node 24.22.0). Commands and counts are exact.
 
 ```
 cd backend && .venv/bin/python -m pytest -q
-→ 458 passed, 4 skipped in 246.76s   (2026-11-20)
+→ 477 passed, 4 skipped in 200.03s   (2026-11-21)
 ```
 
 The 4 skips: the live-model test (skips unless `AGENTBENCH_OPENAI_API_KEY` is
@@ -550,19 +613,17 @@ budgets. No experiment was run with it.
 
 ```
 cd frontend
-npx tsc --noEmit   → clean
-npm run build      → built in 716ms (792 kB js / 14 kB css)
+npx tsc -b --noEmit   → clean
+npm run lint          → 0 errors (only fast-refresh export warnings)
+npm run build         → built; main chunk 378 kB (118 kB gzip), screens lazy-loaded
 ```
 
-Driven in a real Chromium via Playwright: all 8 screens plus
-`/experiments/:id` and `/runs/:id`, every run-detail tab, the task drawer, the
-import modal, the comparison selectors, light/dark toggle, and a 1024px
-viewport. **Zero console errors.** Screenshots in `frontend/screenshots/`.
-
-Three bugs were found by that browser pass and fixed: a 500 on
-`GET /tasks/benchmarks` (`func.case` instead of `sqlalchemy.case` — now covered
-by a regression test), a React duplicate-key warning on the failures table, and
-a score rendered without its denominator.
+Driven in a real Chromium via Playwright against the live API and the real
+local database (2026-11-21): all 19 routes at 1440px, 1024px, 768px and 390px.
+**Zero console errors or warnings** and no horizontal page overflow at any
+width. That browser pass found and fixed two layout bugs: grid cards that could
+not shrink below their content, and screen-reader-only labels inside tables
+escaping their scroll container and widening the page on phones.
 
 ### Not verified
 
@@ -587,6 +648,31 @@ Stated plainly, because an undocumented gap is worse than a known one.
 | **Grading integrity** | The four proven runner-config injection vectors are rejected at the patch layer before any test executes, and a task cannot opt out. |
 | **Metric correctness** | Wilson bounds and `pass@k` asserted against independent hand computation; denominator treatment of incomplete and non-attributable runs asserted explicitly. |
 | **Result provenance** | Every experiment records `simulated` / `offline_adapter_test` / `live_model` / `external_agent` at launch, surfaced in metrics, the Markdown report, a CSV column, and the UI. |
+
+### Known limitations of the UI
+
+- The experiments explorer loads the latest 100 experiments and searches those;
+  server-side search is not implemented.
+- `/failures` accepts one category at a time, so multi-category buckets filter
+  the 200 most recent failures in the browser (the page says when it does).
+- Tool results carry no call id, so the trajectory view pairs a `tool.result`
+  with a `tool.call` only when it immediately follows for the same tool.
+- System metrics are a snapshot plus a rolling history kept while the page is
+  open. Resource usage is not recorded per run. On macOS, CPU utilisation is
+  an estimate from `ps`; `psutil` is used instead when installed.
+- The pairwise significance test needs at least 10 scored runs per arm; every
+  local-model result so far is far below that.
+
+## Roadmap
+
+- Record resource usage (RAM, swap, container CPU) per run, so slow runs can be
+  told apart from a swapping machine.
+- Tool-call ids in the trajectory recorder for exact call/result pairing.
+- Server-side experiment search and multi-category failure filters.
+- More repetitions per task for the local models, to reach intervals narrow
+  enough to rank them.
+- More benchmark suites beyond the bundled `textkit`.
+- A VM-level sandbox provider (`sandbox/base.Sandbox` is the extension point).
 
 ---
 
@@ -621,9 +707,9 @@ backend/
   agentbench/
     config.py logging_setup.py
     db/ schemas/ registry/ sandbox/ adapters/
-    trajectory/ grading/ orchestrator/ metrics/ api/ cli/
+    trajectory/ grading/ orchestrator/ metrics/ monitor/ api/ cli/
   alembic/            # migrations (applies clean, no drift, reversible)
-  tests/              # 462 tests (unit + integration); fixtures/minirepo is a self-contained repo
+  tests/              # 481 tests (unit + integration); fixtures/minirepo is a self-contained repo
 benchmarks/
   textkit/            # sample repository (MIT, written for this project)
   acceptance/textkit/ # hidden grading tests — outside the repo by design
