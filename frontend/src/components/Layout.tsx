@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { useHealth, useLocalModels } from "../api/hooks";
 import { cx } from "./ui";
@@ -41,7 +41,7 @@ const NAV: { section: string; items: { to: string; label: string; icon: string; 
   {
     section: "Workspace",
     items: [
-      { to: "/", label: "Overview", icon: "overview", end: true },
+      { to: "/overview", label: "Overview", icon: "overview" },
       { to: "/leaderboard", label: "Leaderboard", icon: "leaderboard" },
       { to: "/experiments", label: "Experiments", icon: "experiments" },
       { to: "/compare", label: "Compare", icon: "compare" },
@@ -161,13 +161,13 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { theme, toggle } = useTheme();
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2.5 px-4 pb-4 pt-4">
+      <Link to="/" onClick={onNavigate} title="About Agent Labs" className="flex items-center gap-2.5 px-4 pb-4 pt-4">
         <Logo className="h-7 w-7" />
         <div className="min-w-0 leading-tight">
           <div className="text-[13px] font-semibold tracking-tight">Agent Labs</div>
           <div className="subtle text-2xs">Prove. Measure. Improve.</div>
         </div>
-      </div>
+      </Link>
 
       <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-2.5 pb-4">
         {NAV.map((group) => (
@@ -258,8 +258,10 @@ export default function Layout() {
               <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" strokeLinecap="round" />
             </svg>
           </button>
-          <Logo className="h-6 w-6" />
-          <span className="text-[13px] font-semibold tracking-tight">Agent Labs</span>
+          <Link to="/" className="flex items-center gap-2">
+            <Logo className="h-6 w-6" />
+            <span className="text-[13px] font-semibold tracking-tight">Agent Labs</span>
+          </Link>
         </header>
 
         <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

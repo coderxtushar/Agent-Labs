@@ -15,7 +15,7 @@ The design premise is **evidence over assertion**. An agent never reports its
 own success, every rate carries its denominator, and a number that cannot be
 computed honestly is reported as missing rather than guessed.
 
-![Agent Labs overview](frontend/screenshots/01-overview.png)
+![Agent Labs home page](frontend/screenshots/00-home.png)
 
 > The Python package and CLI keep their original name, `agentbench`.
 
@@ -72,13 +72,15 @@ placeholders only; never commit a filled-in copy.
 
 ## A tour of the app
 
-The UI is a dark-first React app grouped into **Workspace**, **Analysis** and
+The UI opens on a home page that explains the product; **Open the lab** leads
+into the app, a dark-first sidebar grouped into **Workspace**, **Analysis** and
 **System**. Every number on it comes from the API; nothing is hard-coded, and
 simulated pipeline checks are labelled and kept out of model headline numbers.
 
 | Screen | What it shows |
 | --- | --- |
-| **Overview** | Experiments, runs, model-only success rate with its interval, highest-observed model (and whether it is distinguishable from the runner-up), runtime, solved / failed / excluded runs, results by provenance, failure distribution, recent runs and experiments. |
+| **Home** (`/`) | What Agent Labs is, how a run goes from task to verdict, the principles it enforces, live numbers from your own lab (read from the API, never sample data), and a map linking to every feature page. |
+| **Overview** (`/overview`) | Experiments, runs, model-only success rate with its interval, highest-observed model (and whether it is distinguishable from the runner-up), runtime, solved / failed / excluded runs, results by provenance, failure distribution, recent runs and experiments. |
 | **Leaderboard** | One row per agent config × provenance: tasks attempted and passed, success rate with 95% Wilson interval, mean/median runtime, timeout and agent-error rates. Filter by benchmark suite and experiments; simulated results are hidden unless asked for. Rows whose interval overlaps the leader's are marked "≈ leader". |
 | **Model profile** | Performance history with interval band, task-level results, strengths and weaknesses quoted from evidence ("solved 1 of 1 attributable attempt(s)"), runtime histogram, failure categories. |
 | **Experiments** | Searchable, filterable, sortable explorer; detail page with results, runs, configuration and a **Reproducibility** tab (seed, versions, config snapshot, CLI command). |
@@ -619,7 +621,7 @@ npm run build         → built; main chunk 378 kB (118 kB gzip), screens lazy-l
 ```
 
 Driven in a real Chromium via Playwright against the live API and the real
-local database (2026-11-21): all 19 routes at 1440px, 1024px, 768px and 390px.
+local database (2026-11-21): the home page and all 19 app routes at 1440px, 1024px, 768px and 390px.
 **Zero console errors or warnings** and no horizontal page overflow at any
 width. That browser pass found and fixed two layout bugs: grid cards that could
 not shrink below their content, and screen-reader-only labels inside tables

@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import { LoadingRows } from "./components/ui";
 
 const Agents = lazy(() => import("./screens/Agents"));
+const Home = lazy(() => import("./screens/Home"));
 const Analytics = lazy(() => import("./screens/Analytics"));
 const Benchmarks = lazy(() => import("./screens/Benchmarks"));
 const CompareStudio = lazy(() => import("./screens/CompareStudio"));
@@ -27,11 +28,13 @@ function page(node: ReactNode) {
 }
 
 export const router = createBrowserRouter([
+  // Public home page: what Agent Labs is, with links into every feature.
+  { path: "/", element: page(<Home />) },
   {
-    path: "/",
+    // The app: every feature page shares the sidebar shell.
     element: <Layout />,
     children: [
-      { index: true, element: page(<Overview />) },
+      { path: "overview", element: page(<Overview />) },
       // workspace
       { path: "leaderboard", element: page(<Leaderboard />) },
       { path: "leaderboard/:agentId", element: page(<ModelProfile />) },

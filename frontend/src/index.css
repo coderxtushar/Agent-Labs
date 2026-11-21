@@ -21,8 +21,8 @@
     --text: 20 20 24;
     --text-muted: 92 92 104;
     --text-subtle: 132 132 145;
-    --accent: 84 92 230;
-    --accent-soft: 84 92 230;
+    --accent: 29 99 237;
+    --accent-soft: 29 99 237;
     --on-accent: 255 255 255;
     --good: 5 150 105;
     --bad: 225 29 72;
@@ -42,8 +42,8 @@
     --text: 236 236 240;
     --text-muted: 160 160 172;
     --text-subtle: 112 112 124;
-    --accent: 138 145 255;
-    --accent-soft: 138 145 255;
+    --accent: 92 158 255;
+    --accent-soft: 92 158 255;
     --on-accent: 12 12 20;
     --good: 52 211 153;
     --bad: 251 113 133;
@@ -185,5 +185,166 @@
       opacity: 1;
       transform: none;
     }
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Home page motion layer.                                                    */
+/* One entrance on load, purposeful loops (each pausable), and hover/press    */
+/* feedback. Nothing fades in because the page scrolled. The global           */
+/* prefers-reduced-motion rule above stops all of it.                         */
+/* ------------------------------------------------------------------------- */
+@layer components {
+  /* Hero entrance: each [data-enter] child rises once, staggered by --i. */
+  .enter {
+    animation: enter-up 720ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 90ms + 60ms);
+  }
+
+  /* Technical ground: a fine grid fading out from the hero's centre. */
+  .grid-ground {
+    background-image:
+      linear-gradient(to right, rgb(var(--border) / 0.55) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(var(--border) / 0.55) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black 30%, transparent 75%);
+  }
+
+  /* Linked cards lift 2px; their border and shadow answer the pointer. */
+  .lift {
+    transition:
+      transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      border-color 220ms ease,
+      box-shadow 220ms ease;
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+    border-color: rgb(var(--border-strong));
+    box-shadow: 0 18px 40px -24px rgb(0 0 0 / 0.55);
+  }
+
+  /* Buttons step on hover and press on click. */
+  .press {
+    transition:
+      transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      opacity 160ms ease,
+      border-color 160ms ease,
+      background-color 160ms ease;
+  }
+  .press:hover {
+    transform: translateY(-1px);
+  }
+  .press:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* Underline draws from the left. */
+  .draw {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    transition: background-size 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .draw:hover {
+    background-size: 100% 1px;
+  }
+
+  /* Screenshots zoom gently inside their frame. */
+  .zoom-frame img {
+    transition: transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .zoom-frame:hover img {
+    transform: scale(1.02);
+  }
+
+  /* A pulse travelling along a connector; horizontal and vertical variants. */
+  .pulse-x,
+  .pulse-y {
+    position: absolute;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, rgb(var(--accent)), transparent);
+    animation: pulse-x 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    animation-delay: var(--delay, 0s);
+  }
+  .pulse-x {
+    top: -1px;
+    left: 0;
+    height: 3px;
+    width: 36%;
+  }
+  .pulse-y {
+    left: -1px;
+    top: 0;
+    width: 3px;
+    height: 36%;
+    background: linear-gradient(180deg, transparent, rgb(var(--accent)), transparent);
+    animation-name: pulse-y;
+  }
+
+  /* Live indicator dot. */
+  .beacon {
+    animation: beacon 2.4s ease-in-out infinite;
+  }
+
+  /* Replay rows arrive with a short rise. */
+  .row-in {
+    animation: row-in 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  /* One switch pauses every loop on the page. */
+  [data-motion="paused"] .pulse-x,
+  [data-motion="paused"] .pulse-y,
+  [data-motion="paused"] .beacon {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes pulse-x {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(290%);
+  }
+}
+@keyframes pulse-y {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(290%);
+  }
+}
+@keyframes beacon {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--good) / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgb(var(--good) / 0);
+  }
+}
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
