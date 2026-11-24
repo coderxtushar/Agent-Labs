@@ -16,7 +16,8 @@ export const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://127.0.0.1:8000/api/v1";
 
 function buildUrl(path: string, params?: Record<string, string | number | boolean | undefined | null>): string {
-  const url = new URL(`${API_BASE_URL}${path}`);
+  // A relative base ("/api/v1", `npm run tailnet`) resolves against the page.
+  const url = new URL(`${API_BASE_URL}${path}`, window.location.origin);
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined && value !== null && value !== "") {
       url.searchParams.set(key, String(value));

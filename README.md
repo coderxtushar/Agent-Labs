@@ -370,8 +370,41 @@ annotated; those actions say so. Two views are left out:
 3. To publish new results, re-export and push. Without Git, run
    `npx wrangler pages deploy dist` from `frontend/`.
 
+**Or on Cloudflare Workers** (a `*.workers.dev` URL): connect the repo with the
+root directory `frontend`. `frontend/wrangler.jsonc` makes `wrangler deploy`
+run `npm run build:snapshot` itself and serve `dist` with a fallback for deep
+links, so the site is the snapshot even if the dashboard's build command is
+the plain `npm run build`. A plain build would call a local API that visitors
+don't have, and every page would say "API unreachable".
+
 Netlify and Vercel work the same way, but need a rewrite of `/*` to
 `/index.html`. Avoid GitHub Pages: deep links break there.
+
+## Using the live app from your own devices (Tailscale)
+
+To reach the full, live app from your phone or another laptop, serve it on
+your private tailnet. Only devices signed into your Tailscale account can
+open it.
+
+```bash
+# 1. API (stays on loopback)
+cd backend && AGENTBENCH_API_PORT=8077 .venv/bin/python -m agentbench.cli.main serve
+# 2. UI + same-origin proxy to the API, on 127.0.0.1:4173
+cd frontend && npm run tailnet
+# 3. Publish 4173 to your tailnet as https://<machine>.<tailnet>.ts.net
+tailscale serve --bg 4173      # stop with: tailscale serve reset
+```
+
+`npm run tailnet` builds the UI to call `/api/v1` on its own origin. The Vite
+proxy forwards those calls to the API on this machine, so the API is never
+exposed itself. If you start the API with `AGENTBENCH_API_TOKEN`, put the same
+value in the root `.env`; the proxy adds it to requests and it never reaches the
+browser. Only `*.ts.net` and local host names are accepted.
+
+Use `tailscale serve`, **not** `tailscale funnel`. Funnel publishes the port to
+the whole internet, and because it connects from loopback, the non-loopback
+token check in `serve` does not trigger. Anyone with the link could then launch
+runs (code execution in Docker on your machine) and read the host monitor.
 
 ---
 

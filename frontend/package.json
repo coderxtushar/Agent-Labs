@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "build:snapshot": "tsc -b && vite build --mode snapshot",
     "preview:snapshot": "vite preview --mode snapshot",
+    "tailnet": "tsc -b && vite build --mode tailnet && vite preview --mode tailnet",
     "lint": "oxlint",
     "preview": "vite preview"
   },

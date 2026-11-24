@@ -1,0 +1,20 @@
+// Cloudflare Workers deploy of the static, read-only snapshot UI
+// (https://agent-labs.<account>.workers.dev). No server code: static assets only.
+//
+// `wrangler deploy` runs `build.command` first, so the published site is always
+// the snapshot build (reads frontend/public/snapshot/), even if the dashboard's
+// build command is the plain `npm run build`, which would call a local API that
+// visitors do not have.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agent-labs",
+  "compatibility_date": "2025-09-01",
+  "build": {
+    "command": "npm run build:snapshot"
+  },
+  "assets": {
+    "directory": "./dist",
+    // Deep links such as /experiments/<id> fall back to index.html.
+    "not_found_handling": "single-page-application"
+  }
+}
