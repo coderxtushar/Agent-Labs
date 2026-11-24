@@ -1,0 +1,14 @@
+diff --git a/src/textkit/slug.py b/src/textkit/slug.py
+--- a/src/textkit/slug.py
++++ b/src/textkit/slug.py
+@@ -23,5 +23,8 @@
+ 
+     pieces = []
+     for char in text.lower():
+-        pieces.append(char if char.isalnum() else sep)
+-    return "".join(pieces)
++        if char.isalnum():
++            pieces.append(char)
++        elif not pieces or not pieces[-1] == sep:
++            pieces.append(sep)
++    return "".join(pieces).strip(sep)

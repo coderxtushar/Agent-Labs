@@ -1,0 +1,77 @@
+diff --git a/src/textkit/fields.py b/src/textkit/fields.py
+--- a/src/textkit/fields.py
++++ b/src/textkit/fields.py
+@@ -10,6 +10,16 @@
+     empty input yields a single empty field, and a trailing separator yields a
+     trailing empty field.
+ 
++    Fields may be quoted to allow the separator inside them. A field is quoted
++    only if its first character is ``\"``. A quoted field ends at the matching
++    closing quote; between the quotes the separator is an ordinary character
++    and two consecutive quotes (``""``) stand for one literal quote. The
++    enclosing quotes are not part of the returned value, so a field written as
++    ``""`` is an empty string. After a closing quote, the next character must
++    be ``sep`` or the end of the line; otherwise a ``ValueError`` is raised,
++    as is the case for a quoted field without a closing quote. A quote at any
++    other position in a field is literal and kept as written.
++
+     Args:
+         line: A single line of delimited text.
+         sep: Field separator. Must be exactly one character.
+@@ -18,8 +28,54 @@
+         The fields, in order.
+ 
+     Raises:
+-        ValueError: If ``sep`` is not exactly one character.
++        ValueError: If ``sep`` is not exactly one character, if a quoted
++            field is missing its closing quote, or if a character other than
++            ``sep`` (or end of line) follows a closing quote.
+     """
+     if len(sep) != 1:
+         raise ValueError("sep must be a single character")
+-    return line.split(sep)
++
++    fields: list[str] = []
++    i, n = 0, len(line)
++    while True:
++        # Empty line (no fields yet and nothing left) is one empty field.
++        if i >= n and not fields:
++            return [""]
++
++        if line[i] == '"':
++            # Quoted field: strip the opening quote and read until the matching
++            # closing quote, translating "" to a single literal quote.
++            i += 1
++            chars: list[str] = []
++            while True:
++                if i >= n:
++                    raise ValueError("quoted field is not terminated")
++                if line[i] == '"':
++                    if i + 1 < n and line[i + 1] == '"':
++                        chars.append('"')
++                        i += 2
++                        continue
++                    # Closing quote.
++                    i += 1
++                    if i < n and line[i] != sep:
++                        raise ValueError(
++                            "a quoted field must be followed by the separator "
++                            "or the end of the line"
++                        )
++                    break
++                chars.append(line[i])
++                i += 1
++            fields.append("".join(chars))
++        else:
++            # Unquoted field: everything up to the next separator (or end).
++            j = i
++            while j < n and line[j] != sep:
++                j += 1
++            fields.append(line[i:j])
++            i = j
++
++        # After a field, a separator starts a new field; the end of the line
++        # (i >= n) means the field just consumed it, so stop.
++        if i >= n or line[i] != sep:
++            return fields
++        i += 1

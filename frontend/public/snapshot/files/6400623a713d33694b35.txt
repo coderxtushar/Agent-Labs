@@ -1,0 +1,26 @@
+diff --git a/src/textkit/truncate.py b/src/textkit/truncate.py
+--- a/src/textkit/truncate.py
++++ b/src/textkit/truncate.py
+@@ -9,7 +9,8 @@
+     """Shorten ``text`` so it fits within ``limit`` characters.
+ 
+     When the text is longer than ``limit`` it is cut and ``suffix`` is appended
+-    to show that content was removed.
++    to show that content was removed. The suffix is counted against the budget,
++    and the cut is made at a word boundary when one exists within that budget.
+ 
+     Args:
+         text: Input text.
+@@ -26,4 +27,11 @@
+         raise ValueError("limit must not be negative")
+     if len(text) <= limit:
+         return text
+-    return text[:limit] + suffix
++    if limit <= len(suffix):
++        return suffix[:limit]
++    budget = limit - len(suffix)
++    cut = budget
++    idx = text[:budget].rfind(" ")
++    if idx != -1:
++        cut = idx
++    return text[:cut].rstrip() + suffix

@@ -27,11 +27,13 @@ bench_app = typer.Typer(no_args_is_help=True, help="Benchmark task registry.")
 agent_app = typer.Typer(no_args_is_help=True, help="Agent configurations.")
 exp_app = typer.Typer(no_args_is_help=True, help="Experiments.")
 images_app = typer.Typer(no_args_is_help=True, help="Benchmark execution images.")
+snapshot_app = typer.Typer(no_args_is_help=True, help="Static read-only snapshot for hosting.")
 app.add_typer(db_app, name="db")
 app.add_typer(bench_app, name="benchmark")
 app.add_typer(agent_app, name="agent")
 app.add_typer(exp_app, name="experiment")
 app.add_typer(images_app, name="images")
+app.add_typer(snapshot_app, name="snapshot")
 
 
 @app.callback()
@@ -517,6 +519,49 @@ def serve(
         raise typer.Exit(code=2)
 
     uvicorn.run("agentbench.api.main:app", host=host, port=port, reload=reload, log_config=None)
+
+
+_DEFAULT_SNAPSHOT_DIR = Path(__file__).resolve().parents[3] / "frontend" / "public" / "snapshot"
+
+
+@snapshot_app.command("export")
+def snapshot_export(
+    out: Annotated[
+        Path, typer.Option(help="Directory to write; replaced if it holds a previous snapshot.")
+    ] = _DEFAULT_SNAPSHOT_DIR,
+) -> None:
+    """Export every read the UI makes into a static, read-only snapshot.
+
+    Build the UI with `npm run build:snapshot` to serve it from any static host.
+    No worker is started and nothing in the database changes. Live host views
+    (RAM, Docker, Ollama) are not exported.
+    """
+    import logging
+    import warnings
+
+    with warnings.catch_warnings():
+        # Starlette's notice about its own httpx dependency; nothing to act on here.
+        warnings.simplefilter("ignore")
+        from fastapi.testclient import TestClient
+
+    from agentbench.api.main import app as api
+    from agentbench.snapshot import SnapshotError, export_snapshot, snapshot_size
+
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # one line per request otherwise
+    # No context manager: the app's lifespan (and so the worker) never starts.
+    client = TestClient(api)
+    try:
+        manifest = export_snapshot(client, out)
+    except SnapshotError as exc:
+        typer.echo(f"snapshot export failed: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    counts = manifest["counts"]
+    typer.echo(
+        f"wrote {counts['responses']} responses and {len(manifest['collections'])} collections "
+        f"({snapshot_size(out) / 1_048_576:.1f} MB) to {out}\n"
+        f"{counts['experiments']} experiments, {counts['runs']} runs, {counts['tasks']} tasks, "
+        f"{counts['agents']} agents. Build the UI with: npm run build:snapshot"
+    )
 
 
 @app.command("worker")

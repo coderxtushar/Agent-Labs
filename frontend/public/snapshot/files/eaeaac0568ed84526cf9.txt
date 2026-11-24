@@ -1,0 +1,46 @@
+diff --git a/src/textkit/wrap.py b/src/textkit/wrap.py
+--- a/src/textkit/wrap.py
++++ b/src/textkit/wrap.py
+@@ -21,4 +21,41 @@
+     Raises:
+         ValueError: If ``width`` is less than 1.
+     """
+-    raise NotImplementedError("wrap_text is not implemented yet")
++    if width < 1:
++        raise ValueError("width must be at least 1")
++
++    # ``str.split()`` with no args splits on any run of whitespace and discards
++    # empty strings, so runs of whitespace collapse to a single separator.
++    words = text.split()
++    if not words:
++        return []
++
++    lines: list[str] = []
++    current: list[str] = []
++    current_len = 0
++
++    for word in words:
++        # A word longer than ``width`` cannot fit on any line, so hard-split it
++        # into fixed-size chunks that we then pack greedily.
++        if len(word) > width:
++            chunks = [word[i:i + width] for i in range(0, len(word), width)]
++        else:
++            chunks = [word]
++
++        for chunk in chunks:
++            if not current:
++                current = [chunk]
++                current_len = len(chunk)
++            elif current_len + 1 + len(chunk) <= width:
++                # Join with a single space between words.
++                current.append(chunk)
++                current_len += 1 + len(chunk)
++            else:
++                lines.append(" ".join(current))
++                current = [chunk]
++                current_len = len(chunk)
++
++    if current:
++        lines.append(" ".join(current))
++
++    return lines

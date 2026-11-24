@@ -1,5 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+
+import { SNAPSHOT_MODE } from "../api/snapshot";
+import { LiveOnly } from "../components/LiveOnly";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { useDockerStatus, useExperiments, useLocalModels, useResources, useRuns } from "../api/hooks";
@@ -191,6 +194,14 @@ function HistoryChart({
 
 // --------------------------------------------------------------------------- //
 export default function SystemMonitor() {
+  return SNAPSHOT_MODE ? (
+    <LiveOnly title="System monitor" what="RAM, swap, CPU, Docker and Ollama on the machine running Agent Labs." />
+  ) : (
+    <SystemMonitorLive />
+  );
+}
+
+function SystemMonitorLive() {
   const resources = useResources();
   const docker = useDockerStatus();
   const ollama = useLocalModels(true);

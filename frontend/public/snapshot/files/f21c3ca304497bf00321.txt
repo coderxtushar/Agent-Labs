@@ -1,0 +1,59 @@
+diff --git a/src/textkit/truncate.py b/src/textkit/truncate.py
+--- a/src/textkit/truncate.py
++++ b/src/textkit/truncate.py
+@@ -6,10 +6,13 @@
+ 
+ 
+ def truncate(text: str, limit: int, suffix: str = DEFAULT_SUFFIX) -> str:
+-    """Shorten ``text`` so it fits within ``limit`` characters.
++    """Shorten ``text`` so the result is at most ``limit`` characters long.
+ 
+-    When the text is longer than ``limit`` it is cut and ``suffix`` is appended
+-    to show that content was removed.
++    The ``suffix`` is always counted inside ``limit``: it is not tacked on
++    after the cut. When the text is cut, the cut is made at a word boundary
++    (the last space that still fits inside the budget) when one exists,
++    otherwise at the exact budget. No trailing whitespace precedes the
++    suffix.
+ 
+     Args:
+         text: Input text.
+@@ -17,13 +20,36 @@
+         suffix: Marker appended when the text was shortened.
+ 
+     Returns:
+-        The original text when it already fits, otherwise a shortened version.
++        The original text when it already fits within ``limit`` (returned
++        unchanged, with no suffix). Otherwise a shortened string whose length
++        is at most ``limit``.
+ 
+     Raises:
+         ValueError: If ``limit`` is negative.
+     """
+     if limit < 0:
+         raise ValueError("limit must not be negative")
++
++    # Text that already fits is returned unchanged, no suffix.
+     if len(text) <= limit:
+         return text
+-    return text[:limit] + suffix
++
++    # No room left for any text: return the suffix itself, clipped to fit.
++    if limit <= len(suffix):
++        return suffix[:limit]
++
++    # Budget for the visible text portion (suffix fits inside ``limit``).
++    budget = limit - len(suffix)
++
++    cut = text[:budget]
++
++    # Prefer a word boundary: cut just before the last space that fits
++    # inside the budget.
++    space_index = cut.rfind(" ")
++    if space_index != -1:
++        cut = cut[:space_index]
++
++    # Guarantee no trailing whitespace before the suffix.
++    cut = cut.rstrip()
++
++    return cut + suffix

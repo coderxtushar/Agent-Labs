@@ -1,0 +1,38 @@
+diff --git a/src/textkit/chunks.py b/src/textkit/chunks.py
+--- a/src/textkit/chunks.py
++++ b/src/textkit/chunks.py
+@@ -8,16 +8,30 @@
+ 
+     Each chunk is a list. The last chunk may be shorter than ``size``.
+ 
++    ``chunked`` returns a lazy iterator over the chunks; the source ``items``
++    may be any iterable (including generators and infinite iterators), and
++    it is consumed only as far as needed to produce each chunk.
++
+     Args:
+         items: The elements to split.
+         size: Chunk length. Must be at least 1.
+ 
+-    Returns:
+-        The chunks, in order.
++    Yields:
++        The chunks, in order, as lists of up to ``size`` elements.
+ 
+     Raises:
+-        ValueError: If ``size`` is less than 1.
++        ValueError: If ``size`` is less than 1 (checked eagerly, at call time).
+     """
+     if size < 1:
+         raise ValueError("size must be at least 1")
+-    return [list(items[start : start + size]) for start in range(0, len(items), size)]
++    iterator = iter(items)
++    while True:
++        chunk = []
++        for _ in range(size):
++            try:
++                chunk.append(iterator.__next__())
++            except StopIteration:
++                break
++        if not chunk:
++            return
++        yield chunk

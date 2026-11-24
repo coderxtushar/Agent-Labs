@@ -1,0 +1,9 @@
+diff --git a/src/textkit/stats.py b/src/textkit/stats.py
+--- a/src/textkit/stats.py
++++ b/src/textkit/stats.py
+@@ -14,4 +14,4 @@
+     Returns:
+         The number of words.
+     """
+-    return len(text.split(" "))
++    return len(text.split())

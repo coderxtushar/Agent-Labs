@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:snapshot": "tsc -b && vite build --mode snapshot",
+    "preview:snapshot": "vite preview --mode snapshot",
     "lint": "oxlint",
     "preview": "vite preview"
   },

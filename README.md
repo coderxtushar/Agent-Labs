@@ -311,6 +311,7 @@ agentbench experiment report <id> --format markdown|json|csv
 agentbench experiment compare <baseline> <candidate>
 agentbench serve [--host --port]         # API (+ in-process worker)
 agentbench worker                        # standalone worker
+agentbench snapshot export [--out DIR]   # static read-only snapshot for hosting
 ```
 
 ## API
@@ -328,6 +329,49 @@ agentbench worker                        # standalone worker
 
 Set `AGENTBENCH_API_TOKEN` for any non-loopback deployment; `agentbench serve`
 refuses to bind a public address without one.
+
+---
+
+## Hosting the UI for free (static snapshot)
+
+Running benchmarks needs Docker, a model and plenty of RAM, which no free host
+offers. Showing the results does not. `agentbench snapshot export` replays
+every read the UI makes against the real API, in-process, and writes each
+response to `frontend/public/snapshot/` with a manifest. A UI built with
+`npm run build:snapshot` reads those files instead of an API, so any static
+host can serve it with no server at all.
+
+```bash
+cd backend  && .venv/bin/python -m agentbench.cli.main snapshot export
+cd frontend && npm run build:snapshot      # dist/ is the whole site (~11 MB)
+npx vite preview --mode snapshot           # check it locally at :4173
+```
+
+**What it is.** Every number is the API's own response, byte for byte: the
+same metrics, intervals and provenance labels. The browser only filters and
+pages the five list endpoints (tasks, experiments, runs, experiment runs,
+failures). It does that with the server's rules, and the results were checked
+to match the API exactly on 32 filter combinations. A banner on every page
+says it is a read-only snapshot and gives the export date.
+
+**What it is not.** It is not live, and nothing can be launched, validated or
+annotated; those actions say so. Two views are left out:
+- Compare covers pairs of experiments; 3–6-arm matrices need the live app.
+- System monitor and Local models describe the machine Agent Labs runs on, so
+  they are not exported. Your RAM, Docker state and model list stay private,
+  and the exporter replaces your home directory with `~` in every path.
+
+**Deploy on Cloudflare Pages (free, unlimited bandwidth).**
+1. Export, then commit `frontend/public/snapshot/` (about 8 MB). The host
+   cannot run the exporter, because it needs your database.
+2. In Pages, connect the repo and set the root directory to `frontend`, the
+   build command to `npm run build:snapshot` and the output to `dist`.
+   Unknown paths fall back to the app, so links like `/leaderboard` work.
+3. To publish new results, re-export and push. Without Git, run
+   `npx wrangler pages deploy dist` from `frontend/`.
+
+Netlify and Vercel work the same way, but need a rewrite of `/*` to
+`/index.html`. Avoid GitHub Pages: deep links break there.
 
 ---
 
@@ -713,6 +757,10 @@ Done:
   scripts/run-local-suite.sh                                    # bonsai-2 and ornith, 5 repetitions
   REPETITIONS=3 AGENTS="bonsai-2-27b-local@1.0" scripts/run-local-suite.sh
   ```
+
+- **Free static hosting.** `agentbench snapshot export` plus
+  `npm run build:snapshot` publish recorded results as a read-only site with
+  no backend (see *Hosting the UI for free*).
 
 Next:
 

@@ -1,0 +1,30 @@
+diff --git a/src/textkit/slug.py b/src/textkit/slug.py
+--- a/src/textkit/slug.py
++++ b/src/textkit/slug.py
+@@ -6,7 +6,8 @@
+ def slugify(text: str, sep: str = "-") -> str:
+     """Convert ``text`` into a lowercase URL slug.
+ 
+-    Every character that is not a letter or digit becomes the separator.
++    Runs of non-alphanumeric characters collapse into a single separator, and
++    leading/trailing separators are stripped.
+ 
+     Args:
+         text: Input text.
+@@ -21,7 +22,13 @@
+     if len(sep) != 1:
+         raise ValueError("sep must be a single character")
+ 
+-    pieces = []
++    pieces: list[str] = []
++    previous_was_separator = False
+     for char in text.lower():
+-        pieces.append(char if char.isalnum() else sep)
+-    return "".join(pieces)
++        if char.isalnum():
++            pieces.append(char)
++            previous_was_separator = False
++        elif not previous_was_separator:
++            pieces.append(sep)
++            previous_was_separator = True
++    return "".join(pieces).strip(sep)

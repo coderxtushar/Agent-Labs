@@ -1,0 +1,69 @@
+diff --git a/src/textkit/width.py b/src/textkit/width.py
+--- a/src/textkit/width.py
++++ b/src/textkit/width.py
+@@ -2,9 +2,19 @@
+ 
+ from __future__ import annotations
+ 
++import unicodedata
++
+ 
+ def display_width(text: str) -> int:
+     """Return the number of terminal columns ``text`` occupies.
++
++    A character counts for:
++
++    - 0 columns if it is a combining mark (non-zero canonical combining
++      class) or a format character (Unicode general category ``Cf``);
++    - 2 columns if its East Asian Width property is ``W`` (wide) or
++      ``F`` (fullwidth);
++    - 1 column otherwise (halfwidth and ambiguous width).
+ 
+     Args:
+         text: Input text.
+@@ -12,7 +22,15 @@
+     Returns:
+         The display width in columns.
+     """
+-    return len(text)
++    total = 0
++    for ch in text:
++        if unicodedata.combining(ch) or unicodedata.category(ch) == "Cf":
++            continue
++        if unicodedata.east_asian_width(ch) in ("W", "F"):
++            total += 2
++        else:
++            total += 1
++    return total
+ 
+ 
+ def pad(text: str, width: int, align: str = "left") -> str:
+@@ -23,17 +41,25 @@
+     Args:
+         text: Input text.
+         width: Target display width in columns.
+-        align: ``"left"``, ``"right"`` or ``"center"``.
++        align: ``"left"``, ``"right"`` or ``"center"``. When centring
++            needs an odd number of padding spaces, the extra space goes
++            on the right.
+ 
+     Returns:
+         The padded text.
++
++    Raises:
++        ValueError: If ``align`` is not ``"left"``, ``"right"`` or
++            ``"center"``.
+     """
+-    gap = width - len(text)
++    gap = width - display_width(text)
+     if gap <= 0:
+         return text
+     if align == "right":
+         return " " * gap + text
+     if align == "center":
+-        left = (gap + 1) // 2
++        left = gap // 2
+         return " " * left + text + " " * (gap - left)
++    if align != "left":
++        raise ValueError(f"align must be 'left', 'right' or 'center', got {align!r}")
+     return text + " " * gap

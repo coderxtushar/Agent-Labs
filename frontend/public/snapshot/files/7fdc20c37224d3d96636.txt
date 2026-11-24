@@ -1,0 +1,9 @@
+diff --git a/src/textkit/lines.py b/src/textkit/lines.py
+--- a/src/textkit/lines.py
++++ b/src/textkit/lines.py
+@@ -26,4 +26,4 @@
+     if last < first:
+         raise ValueError("last must not be less than first")
+     lines = text.splitlines()
+-    return lines[first:last]
++    return lines[first - 1:last]

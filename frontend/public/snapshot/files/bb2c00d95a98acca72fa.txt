@@ -1,0 +1,46 @@
+diff --git a/src/textkit/case.py b/src/textkit/case.py
+--- a/src/textkit/case.py
++++ b/src/textkit/case.py
+@@ -6,10 +6,13 @@
+ def snake_case(text: str) -> str:
+     """Convert an identifier or phrase to ``snake_case``.
+ 
+-    Spaces, hyphens and underscores separate words, and so does a change from a
+-    lowercase letter to an uppercase one (``helloWorld`` -> ``hello_world``).
+-    The result is lowercase, never contains two underscores in a row, and never
+-    starts or ends with one.
++    Spaces, hyphens and underscores separate words. A lowercase-to-uppercase
++    transition, an uppercase letter after a digit, or an acronym's final
++    capital that begins a following capitalised word also start a new word.
++    A run of consecutive uppercase letters stays together (``HTTPServer`` ->
++    ``http_server``, ``XMLHttpRequest`` -> ``xml_http_request``, ``userID`` ->
++    ``user_id``). The result is lowercase, never contains two underscores in a
++    row, and never starts or ends with one.
+ 
+     Args:
+         text: Input identifier, e.g. ``camelCase``, ``PascalCase`` or
+@@ -24,7 +27,22 @@
+             if pieces and pieces[-1] != "_":
+                 pieces.append("_")
+             continue
+-        if char.isupper() and index > 0 and pieces and pieces[-1] != "_":
+-            pieces.append("_")
++
++        if (
++            char.isupper()
++            and index > 0
++            and pieces
++            and pieces[-1] != "_"
++        ):
++            prev = text[index - 1]
++            next_char = text[index + 1] if index + 1 < len(text) else ""
++            starts_new_word = (
++                prev.islower()
++                or prev.isdigit()
++                or (prev.isupper() and next_char.islower())
++            )
++            if starts_new_word:
++                pieces.append("_")
++
+         pieces.append(char.lower())
+     return "".join(pieces).strip("_")

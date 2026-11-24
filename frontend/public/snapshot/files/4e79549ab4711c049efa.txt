@@ -1,0 +1,47 @@
+diff --git a/src/textkit/width.py b/src/textkit/width.py
+--- a/src/textkit/width.py
++++ b/src/textkit/width.py
+@@ -1,6 +1,8 @@
+ """Terminal display width and padding."""
+ 
+ from __future__ import annotations
++
++import unicodedata
+ 
+ 
+ def display_width(text: str) -> int:
+@@ -12,7 +14,15 @@
+     Returns:
+         The display width in columns.
+     """
+-    return len(text)
++    total = 0
++    for ch in text:
++        if unicodedata.combining(ch) or unicodedata.category(ch) == "Cf":
++            total += 0
++        elif unicodedata.east_asian_width(ch) in ("W", "F"):
++            total += 2
++        else:
++            total += 1
++    return total
+ 
+ 
+ def pad(text: str, width: int, align: str = "left") -> str:
+@@ -28,12 +38,14 @@
+     Returns:
+         The padded text.
+     """
+-    gap = width - len(text)
++    gap = width - display_width(text)
+     if gap <= 0:
+         return text
+     if align == "right":
+         return " " * gap + text
+     if align == "center":
+-        left = (gap + 1) // 2
++        left = gap // 2
+         return " " * left + text + " " * (gap - left)
+-    return text + " " * gap
++    if align == "left":
++        return text + " " * gap
++    raise ValueError("align must be 'left', 'right' or 'center'")

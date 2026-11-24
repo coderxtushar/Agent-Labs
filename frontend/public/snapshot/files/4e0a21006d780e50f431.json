@@ -1,0 +1,625 @@
+{
+  "generated_at": "2026-11-23T12:24:16.531802+00:00",
+  "report_version": "1.0",
+  "config_snapshot": {
+    "created_at": "2026-10-29T14:13:02.387231+00:00",
+    "benchmark": {
+      "id": "textkit",
+      "version": "1.0",
+      "tasks": [
+        {
+          "key": "textkit-slugify-collapse@1.0",
+          "category": "bug_fix",
+          "difficulty": "easy",
+          "grading_version": "1.0",
+          "validation_status": "valid",
+          "image": "agentbench/benchmark-python:3.12"
+        },
+        {
+          "key": "textkit-truncate-boundary@1.0",
+          "category": "regression_fix",
+          "difficulty": "medium",
+          "grading_version": "1.0",
+          "validation_status": "valid",
+          "image": "agentbench/benchmark-python:3.12"
+        },
+        {
+          "key": "textkit-wordwrap@1.0",
+          "category": "feature",
+          "difficulty": "medium",
+          "grading_version": "1.0",
+          "validation_status": "valid",
+          "image": "agentbench/benchmark-python:3.12"
+        }
+      ]
+    },
+    "agent": {
+      "agent_config_id": "a4077434c1a84cf690513d0dd6323806",
+      "name": "reference-solution",
+      "version": "1.0",
+      "adapter": "scripted",
+      "provider": null,
+      "model": null,
+      "prompt_version": "1.0",
+      "tools_version": "1.0",
+      "config": {
+        "on_unknown_task": "noop",
+        "tasks": {
+          "textkit-slugify-collapse": {
+            "files": {
+              "src/textkit/slug.py": "\"\"\"URL slug generation.\"\"\"\n\nfrom __future__ import annotations\n\n\ndef slugify(text: str, sep: str = \"-\") -> str:\n    \"\"\"Convert ``text`` into a lowercase URL slug.\n\n    Runs of non-alphanumeric characters collapse into a single separator, and\n    leading/trailing separators are stripped.\n\n    Args:\n        text: Input text.\n        sep: Separator character to use between words.\n\n    Returns:\n        The slugified string.\n\n    Raises:\n        ValueError: If ``sep`` is not exactly one character.\n    \"\"\"\n    if len(sep) != 1:\n        raise ValueError(\"sep must be a single character\")\n\n    pieces: list[str] = []\n    previous_was_separator = False\n    for char in text.lower():\n        if char.isalnum():\n            pieces.append(char)\n            previous_was_separator = False\n        elif not previous_was_separator:\n            pieces.append(sep)\n            previous_was_separator = True\n    return \"\".join(pieces).strip(sep)\n"
+            }
+          },
+          "textkit-wordwrap": {
+            "files": {
+              "src/textkit/wrap.py": "\"\"\"Greedy word wrapping.\"\"\"\n\nfrom __future__ import annotations\n\n\ndef wrap_text(text: str, width: int) -> list[str]:\n    \"\"\"Wrap ``text`` into lines of at most ``width`` characters.\n\n    Args:\n        text: Input text. Runs of whitespace separate words.\n        width: Maximum line length. Must be at least 1.\n\n    Returns:\n        The wrapped lines, without trailing whitespace. Empty input yields an\n        empty list.\n\n    Raises:\n        ValueError: If ``width`` is less than 1.\n    \"\"\"\n    if width < 1:\n        raise ValueError(\"width must be at least 1\")\n\n    lines: list[str] = []\n    current = \"\"\n    for raw_word in text.split():\n        word = raw_word\n        # A word that cannot fit on any line is hard-split across lines.\n        while len(word) > width:\n            if current:\n                lines.append(current)\n                current = \"\"\n            lines.append(word[:width])\n            word = word[width:]\n        if not word:\n            continue\n        if not current:\n            current = word\n        elif len(current) + 1 + len(word) <= width:\n            current = f\"{current} {word}\"\n        else:\n            lines.append(current)\n            current = word\n\n    if current:\n        lines.append(current)\n    return lines\n"
+            }
+          },
+          "textkit-truncate-boundary": {
+            "files": {
+              "src/textkit/truncate.py": "\"\"\"Length-limited text truncation.\"\"\"\n\nfrom __future__ import annotations\n\nDEFAULT_SUFFIX = \"...\"\n\n\ndef truncate(text: str, limit: int, suffix: str = DEFAULT_SUFFIX) -> str:\n    \"\"\"Shorten ``text`` so it fits within ``limit`` characters.\n\n    The returned string never exceeds ``limit``. When the text must be cut, the\n    cut is made at a word boundary if one exists inside the available budget.\n\n    Args:\n        text: Input text.\n        limit: Maximum length of the returned string, including ``suffix``.\n        suffix: Marker appended when the text was shortened.\n\n    Returns:\n        The original text when it already fits, otherwise a shortened version\n        no longer than ``limit``.\n\n    Raises:\n        ValueError: If ``limit`` is negative.\n    \"\"\"\n    if limit < 0:\n        raise ValueError(\"limit must not be negative\")\n    if len(text) <= limit:\n        return text\n    if limit <= len(suffix):\n        return suffix[:limit]\n\n    budget = limit - len(suffix)\n    head = text[:budget]\n    boundary = head.rfind(\" \")\n    if boundary > 0:\n        head = head[:boundary]\n    return head.rstrip() + suffix\n"
+            }
+          }
+        }
+      },
+      "sampling": {},
+      "is_simulated": true,
+      "provenance": "simulated",
+      "include_hints": false,
+      "capabilities": {
+        "key": "scripted",
+        "display_name": "Scripted agent (simulated)",
+        "description": "Applies predefined file contents and commands per task. Exercises the full sandbox/patch/grading pipeline deterministically without a model.",
+        "is_simulated": true,
+        "requires_network": false,
+        "requires_credentials": [],
+        "reports_token_usage": false,
+        "reports_cost": false,
+        "supports_cancellation": true,
+        "streams_events": true,
+        "contract_version": "1.0",
+        "config_schema": {
+          "tasks": {
+            "type": "object",
+            "description": "task_id -> {files, commands}"
+          },
+          "on_unknown_task": {
+            "type": "string",
+            "enum": [
+              "noop",
+              "error"
+            ],
+            "default": "noop"
+          }
+        }
+      },
+      "readiness_at_launch": {
+        "ready": true,
+        "detail": "3 scripted task action(s) configured",
+        "missing": []
+      }
+    },
+    "execution": {
+      "repetitions": 1,
+      "concurrency": 1,
+      "seed": null,
+      "include_hints": false,
+      "limits_override": {},
+      "sandbox_provider": "docker",
+      "infra_retry_limit": 2,
+      "hard_ceilings": {
+        "max_agent_timeout_s": 3600,
+        "max_memory_mb": 4096,
+        "max_cpus": 4.0
+      }
+    },
+    "platform": {
+      "version": "0.1.0"
+    }
+  },
+  "metrics": {
+    "experiment_id": "2773eb5cdc774362b4baf219add315ad",
+    "name": "reference-solution-run",
+    "state": "completed",
+    "agent": {
+      "label": "reference-solution@1.0",
+      "adapter": "scripted",
+      "model": null,
+      "is_simulated": true
+    },
+    "provenance": {
+      "value": "simulated",
+      "label": "Simulated agent",
+      "caveat": "Produced by a deterministic, non-model agent. These numbers validate the evaluation pipeline and are not a model benchmark result.",
+      "is_model_result": false
+    },
+    "benchmark": "textkit@1.0",
+    "grading_version": "1.0",
+    "repetitions": 1,
+    "computed_at": "2026-11-23T12:24:16.530644+00:00",
+    "completeness": {
+      "total_runs": 3,
+      "finished_runs": 3,
+      "pending_runs": 0,
+      "active_runs": 0,
+      "run_completeness": 1.0,
+      "is_complete": true
+    },
+    "outcomes": {
+      "solved": 3,
+      "unsolved": 0,
+      "timeout": 0,
+      "agent_error": 0,
+      "infra_error": 0,
+      "invalid_task": 0,
+      "grading_error": 0,
+      "cancelled": 0
+    },
+    "success_rate_attributable": {
+      "value": 1.0,
+      "percent": 100.0,
+      "numerator": 3,
+      "denominator": 3,
+      "ci_low": 0.4385,
+      "ci_high": 1.0,
+      "ci_method": "Wilson score interval, 95%",
+      "small_sample": true,
+      "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+    },
+    "success_rate_graded": {
+      "value": 1.0,
+      "percent": 100.0,
+      "numerator": 3,
+      "denominator": 3,
+      "ci_low": 0.4385,
+      "ci_high": 1.0,
+      "ci_method": "Wilson score interval, 95%",
+      "small_sample": true,
+      "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+    },
+    "pass_at_1": {
+      "value": 1.0,
+      "percent": 100.0,
+      "numerator": 3,
+      "denominator": 3,
+      "ci_low": 0.4385,
+      "ci_high": 1.0,
+      "ci_method": "Wilson score interval, 95%",
+      "small_sample": true,
+      "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+    },
+    "pass_at_k": {
+      "values": {},
+      "estimator": null,
+      "note": "not reported: the experiment ran 1 repetition(s) per task"
+    },
+    "reliability": {
+      "regression_count": 0,
+      "regression_rate": {
+        "value": 0.0,
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 3,
+        "ci_low": 0.0,
+        "ci_high": 0.5615,
+        "ci_method": "Wilson score interval, 95%",
+        "small_sample": true,
+        "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+      },
+      "timeout_rate": {
+        "value": 0.0,
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 3,
+        "ci_low": 0.0,
+        "ci_high": 0.5615,
+        "ci_method": "Wilson score interval, 95%",
+        "small_sample": true,
+        "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+      },
+      "infra_failure_rate": {
+        "value": 0.0,
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 3,
+        "ci_low": 0.0,
+        "ci_high": 0.5615,
+        "ci_method": "Wilson score interval, 95%",
+        "small_sample": true,
+        "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+      },
+      "infra_retry_total": 0,
+      "excluded_from_rates": 0
+    },
+    "runtime": {
+      "total_s": 37.19,
+      "mean_s": 12.397,
+      "median_s": 13.028,
+      "p90_s": 14.046
+    },
+    "usage": {
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_total": null,
+      "cost_sources": {},
+      "runs_without_reported_usage": 3,
+      "note": "token and cost figures cover only runs where the adapter reported them; cost_sources records how each figure was derived"
+    },
+    "by_category": {
+      "bug_fix": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 1,
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "regressions": 0
+      },
+      "feature": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 1,
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "regressions": 0
+      },
+      "regression_fix": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 1,
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "regressions": 0
+      }
+    },
+    "by_difficulty": {
+      "easy": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 1,
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "regressions": 0
+      },
+      "medium": {
+        "tasks": 2,
+        "attempts": 2,
+        "solved": 2,
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 2,
+          "denominator": 2,
+          "ci_low": 0.3424,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 2 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 2,
+          "denominator": 2,
+          "ci_low": 0.3424,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 2 run(s); treat this rate as indicative, not significant"
+        },
+        "regressions": 0
+      }
+    },
+    "failure_categories": {},
+    "tasks": [
+      {
+        "task_key": "textkit-slugify-collapse@1.0",
+        "task_id": "textkit-slugify-collapse",
+        "title": "slugify emits repeated and dangling separators",
+        "category": "bug_fix",
+        "difficulty": "easy",
+        "attempts": 1,
+        "solved": 1,
+        "unsolved": 0,
+        "timeout": 0,
+        "agent_error": 0,
+        "infra_error": 0,
+        "invalid_task": 0,
+        "grading_error": 0,
+        "cancelled": 0,
+        "regressions": 0,
+        "mean_duration_s": 14.046,
+        "pass_at_1": 1.0,
+        "pass_at_k": {},
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        }
+      },
+      {
+        "task_key": "textkit-truncate-boundary@1.0",
+        "task_id": "textkit-truncate-boundary",
+        "title": "truncate returns strings longer than the requested limit",
+        "category": "regression_fix",
+        "difficulty": "medium",
+        "attempts": 1,
+        "solved": 1,
+        "unsolved": 0,
+        "timeout": 0,
+        "agent_error": 0,
+        "infra_error": 0,
+        "invalid_task": 0,
+        "grading_error": 0,
+        "cancelled": 0,
+        "regressions": 0,
+        "mean_duration_s": 13.028,
+        "pass_at_1": 1.0,
+        "pass_at_k": {},
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        }
+      },
+      {
+        "task_key": "textkit-wordwrap@1.0",
+        "task_id": "textkit-wordwrap",
+        "title": "Implement greedy word wrapping in wrap_text",
+        "category": "feature",
+        "difficulty": "medium",
+        "attempts": 1,
+        "solved": 1,
+        "unsolved": 0,
+        "timeout": 0,
+        "agent_error": 0,
+        "infra_error": 0,
+        "invalid_task": 0,
+        "grading_error": 0,
+        "cancelled": 0,
+        "regressions": 0,
+        "mean_duration_s": 10.117,
+        "pass_at_1": 1.0,
+        "pass_at_k": {},
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        }
+      }
+    ],
+    "warnings": [
+      "Simulated agent: Produced by a deterministic, non-model agent. These numbers validate the evaluation pipeline and are not a model benchmark result.",
+      "only 3 scored run(s): differences of a few percent are noise",
+      "a single repetition per task cannot show run-to-run variance; raise repetitions to measure reliability"
+    ]
+  },
+  "runs": [
+    {
+      "run_id": "04c71c56ebfc438ea1c4802a6572bcfb",
+      "experiment_id": "2773eb5cdc774362b4baf219add315ad",
+      "experiment_name": "reference-solution-run",
+      "task_key": "textkit-slugify-collapse@1.0",
+      "task_category": "bug_fix",
+      "task_difficulty": "easy",
+      "attempt_index": 0,
+      "state": "completed",
+      "outcome": "solved",
+      "counts_toward_success_rate": true,
+      "graded_passed": true,
+      "grading_score": 1.0,
+      "tests_passed": 10,
+      "tests_failed": 0,
+      "failure_category": null,
+      "failure_source": null,
+      "files_changed": 1,
+      "insertions": 11,
+      "deletions": 4,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "infra_attempts": 0,
+      "total_s": 14.046,
+      "agent_s": 0.532,
+      "grading_s": 6.745,
+      "sandbox_provider": "docker",
+      "provenance": "simulated",
+      "termination_reason": "all required grading layers passed"
+    },
+    {
+      "run_id": "2fdee618fec945db99943b19bee816b1",
+      "experiment_id": "2773eb5cdc774362b4baf219add315ad",
+      "experiment_name": "reference-solution-run",
+      "task_key": "textkit-truncate-boundary@1.0",
+      "task_category": "regression_fix",
+      "task_difficulty": "medium",
+      "attempt_index": 0,
+      "state": "completed",
+      "outcome": "solved",
+      "counts_toward_success_rate": true,
+      "graded_passed": true,
+      "grading_score": 1.0,
+      "tests_passed": 10,
+      "tests_failed": 0,
+      "failure_category": null,
+      "failure_source": null,
+      "files_changed": 1,
+      "insertions": 13,
+      "deletions": 4,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "infra_attempts": 0,
+      "total_s": 13.028,
+      "agent_s": 0.522,
+      "grading_s": 4.527,
+      "sandbox_provider": "docker",
+      "provenance": "simulated",
+      "termination_reason": "all required grading layers passed"
+    },
+    {
+      "run_id": "5f01f35a54fb4ecc87c614947ba5a850",
+      "experiment_id": "2773eb5cdc774362b4baf219add315ad",
+      "experiment_name": "reference-solution-run",
+      "task_key": "textkit-wordwrap@1.0",
+      "task_category": "feature",
+      "task_difficulty": "medium",
+      "attempt_index": 0,
+      "state": "completed",
+      "outcome": "solved",
+      "counts_toward_success_rate": true,
+      "graded_passed": true,
+      "grading_score": 1.0,
+      "tests_passed": 11,
+      "tests_failed": 0,
+      "failure_category": null,
+      "failure_source": null,
+      "files_changed": 1,
+      "insertions": 28,
+      "deletions": 6,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "infra_attempts": 0,
+      "total_s": 10.117,
+      "agent_s": 0.516,
+      "grading_s": 5.271,
+      "sandbox_provider": "docker",
+      "provenance": "simulated",
+      "termination_reason": "all required grading layers passed"
+    }
+  ]
+}

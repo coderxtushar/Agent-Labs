@@ -1,0 +1,50 @@
+diff --git a/src/textkit/chunks.py b/src/textkit/chunks.py
+--- a/src/textkit/chunks.py
++++ b/src/textkit/chunks.py
+@@ -3,21 +3,42 @@
+ from __future__ import annotations
+ 
+ 
++def _chunk_iter(it, size):
++    """Lazily yield lists of up to ``size`` elements from ``it``."""
++    while True:
++        chunk = []
++        for _ in range(size):
++            try:
++                chunk.append(next(it))
++            except StopIteration:
++                break
++        if not chunk:
++            return
++        yield chunk
++        if len(chunk) < size:
++            return
++
++
+ def chunked(items, size):
+     """Split ``items`` into consecutive chunks of ``size`` elements.
++
++    ``items`` may be any iterable, including one-shot and infinite iterators.
++    The source is consumed lazily: a chunk is only produced once the caller
++    asks for it, and producing a chunk reads no more elements from the source
++    than that chunk contains.
+ 
+     Each chunk is a list. The last chunk may be shorter than ``size``.
+ 
+     Args:
+-        items: The elements to split.
++        items: An iterable of elements to split.
+         size: Chunk length. Must be at least 1.
+ 
+     Returns:
+-        The chunks, in order.
++        An iterator of lists, in order, each of up to ``size`` elements.
+ 
+     Raises:
+-        ValueError: If ``size`` is less than 1.
++        ValueError: If ``size`` is less than 1 (raised eagerly, at call time).
+     """
+     if size < 1:
+         raise ValueError("size must be at least 1")
+-    return [list(items[start : start + size]) for start in range(0, len(items), size)]
++    return _chunk_iter(iter(items), size)

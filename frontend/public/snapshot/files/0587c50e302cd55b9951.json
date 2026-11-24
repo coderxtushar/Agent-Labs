@@ -1,0 +1,1 @@
+{"status":"ok","version":"0.1.0","sandbox":{"provider":"docker","available":false,"detail":"Cannot connect to the Docker daemon at unix://~/.docker/run/docker.sock. Is the docker daemon running?","isolation":"container (shared kernel; not a VM boundary)"},"database":"sqlite"}

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { useHealth, useLocalModels } from "../api/hooks";
+import { SNAPSHOT_MODE, snapshotDate, snapshotManifest } from "../api/snapshot";
 import { GitHubLink, GitHubMark } from "./GitHubLink";
 import { cx } from "./ui";
 
@@ -39,7 +40,8 @@ function Icon({ name }: { name: string }) {
   );
 }
 
-const NAV: { section: string; items: { to: string; label: string; icon: string; end?: boolean }[] }[] = [
+/** `live`: describes the running machine, so a static snapshot leaves it out. */
+const NAV: { section: string; items: { to: string; label: string; icon: string; end?: boolean; live?: boolean }[] }[] = [
   {
     section: "Workspace",
     items: [
@@ -62,9 +64,9 @@ const NAV: { section: string; items: { to: string; label: string; icon: string; 
   {
     section: "System",
     items: [
-      { to: "/models", label: "Local Models", icon: "models" },
+      { to: "/models", label: "Local Models", icon: "models", live: true },
       { to: "/agents", label: "Agent Configs", icon: "agents" },
-      { to: "/system", label: "System Monitor", icon: "system" },
+      { to: "/system", label: "System Monitor", icon: "system", live: true },
       { to: "/settings", label: "Settings", icon: "settings" },
     ],
   },
@@ -118,6 +120,36 @@ function StatusRow({ label, value, tone, title }: { label: string; value: string
         <Dot tone={tone} />
         <span className="truncate">{value}</span>
       </span>
+    </div>
+  );
+}
+
+/** In a static snapshot there is no API, sandbox or Ollama to check. */
+function SnapshotStatus() {
+  const runs = snapshotManifest()?.counts.runs;
+  return (
+    <div className="space-y-1.5">
+      <StatusRow label="Data" value="static snapshot" tone="idle" title="Read-only export; nothing here is live" />
+      <StatusRow label="Exported" value={snapshotDate() || "—"} tone="idle" />
+      <StatusRow label="Runs" value={runs === undefined ? "—" : String(runs)} tone="idle" />
+    </div>
+  );
+}
+
+function SnapshotBanner() {
+  return (
+    <div className="hairline surface-2 border-b px-4 py-2 text-2xs sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="accent-text font-medium uppercase tracking-[0.08em]">Read-only snapshot</span>
+        <span className="muted">
+          Real results recorded by a local Agent Labs instance{snapshotDate() ? `, exported ${snapshotDate()}` : ""}.
+          Nothing here is live, and nothing can be launched or changed.
+        </span>
+        <GitHubLink className="link ml-auto inline-flex items-center gap-1.5">
+          <GitHubMark className="h-3.5 w-3.5" />
+          Run it yourself
+        </GitHubLink>
+      </div>
     </div>
   );
 }
@@ -177,7 +209,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <div key={group.section}>
             <div className="eyebrow px-2 pb-1.5">{group.section}</div>
             <ul className="space-y-px">
-              {group.items.map((item) => (
+              {group.items.filter((item) => !(SNAPSHOT_MODE && item.live)).map((item) => (
                 <li key={item.to}>
                   <NavLink
                     to={item.to}
@@ -209,7 +241,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="hairline space-y-3 border-t px-4 py-3">
-        <SystemStatus />
+        {SNAPSHOT_MODE ? <SnapshotStatus /> : <SystemStatus />}
         <GitHubLink className="muted surface-2 hairline flex w-full items-center justify-between rounded-md border px-2 py-1 text-2xs transition-colors hover:text-[rgb(var(--text))]">
           <span className="inline-flex items-center gap-1.5">
             <GitHubMark className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-[-8deg]" />
@@ -274,6 +306,7 @@ export default function Layout() {
           </Link>
         </header>
 
+        {SNAPSHOT_MODE && <SnapshotBanner />}
         <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <Outlet />
         </main>

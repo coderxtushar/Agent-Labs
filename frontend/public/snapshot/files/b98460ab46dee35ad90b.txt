@@ -1,0 +1,24 @@
+diff --git a/src/textkit/accents.py b/src/textkit/accents.py
+--- a/src/textkit/accents.py
++++ b/src/textkit/accents.py
+@@ -1,6 +1,8 @@
+ """Diacritic removal."""
+ 
+ from __future__ import annotations
++
++import unicodedata
+ 
+ 
+ def strip_accents(text: str) -> str:
+@@ -15,4 +17,10 @@
+     Returns:
+         ``text`` without diacritical marks.
+     """
+-    return text.encode("ascii", "ignore").decode("ascii")
++    # Decompose precomposed accented letters into a base letter plus
++    # combining marks, drop the combining marks, then re-normalize to NFC
++    # so that characters without diacritics (CJK, Hangul syllables,
++    # ligatures, ``ß``, ...) come back with their original code points.
++    decomposed = unicodedata.normalize("NFD", text)
++    stripped = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
++    return unicodedata.normalize("NFC", stripped)

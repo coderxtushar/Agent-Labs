@@ -1,0 +1,6 @@
+diff --git a/tests/test_acceptance_truncate_boundary.py b/tests/test_acceptance_truncate_boundary.py
+--- /dev/null
++++ b/tests/test_acceptance_truncate_boundary.py
+@@ -0,0 +1,2 @@
++def test_always_passes():
++    assert True

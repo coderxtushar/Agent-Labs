@@ -1,0 +1,44 @@
+# Comparison report
+
+Generated 2026-11-23T12:24:19.146578+00:00.
+
+**Success rate moved from 0% (0/3) to 0% (0/3). No task changed from solved to unsolved or back. These arms are not directly comparable: the arms have different result provenance (simulated vs live_model); they measure different things. Needs more testing: one repetition per task means a single flaky run can flip a task's verdict.**
+
+| | Baseline | Candidate |
+| --- | --- | --- |
+| Experiment | regression-introducing-run | live-qwen2.5-coder-7b-local-r2 |
+| Agent | regression-introducing@1.0 | qwen2.5-coder-7b-local@1.0 |
+| Model | n/a | qwen2.5-coder-7b-32k |
+| Success rate | 0.0% | 0.0% |
+| Solved | 0 | 0 |
+| Runtime (s) | 9.44 | 25.41 |
+| Cost (USD) | None | None |
+
+## Movement
+
+- **newly_solved** (0): none
+- **newly_broken** (0): none
+- **improved** (0): none
+- **degraded** (0): none
+- **unchanged** (3): textkit-slugify-collapse@1.0, textkit-truncate-boundary@1.0, textkit-wordwrap@1.0
+- **not_comparable** (0): none
+
+## Per-task
+
+| Task | Baseline | Candidate | Movement |
+| --- | --- | --- | --- |
+| `textkit-slugify-collapse@1.0` | 0/1 | 0/1 | unchanged |
+| `textkit-truncate-boundary@1.0` | 0/1 | 0/1 | unchanged |
+| `textkit-wordwrap@1.0` | 0/1 | 0/1 | unchanged |
+
+## Statistical note
+
+not computed: a two-proportion test needs at least 10 scored runs per arm (baseline has 3, candidate has 3)
+
+## Comparability blockers
+
+- the arms have different result provenance (simulated vs live_model); they measure different things
+
+## Caveats
+
+- one repetition per task means a single flaky run can flip a task's verdict

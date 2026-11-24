@@ -1,0 +1,42 @@
+diff --git a/src/textkit/numbers.py b/src/textkit/numbers.py
+--- a/src/textkit/numbers.py
++++ b/src/textkit/numbers.py
+@@ -16,3 +16,38 @@
+     """
+     word = noun if count == 1 else (plural if plural is not None else noun + "s")
+     return f"{count} {word}"
++
++
++def ordinal(n: int) -> str:
++    """Return ``n`` followed by its English ordinal suffix.
++
++    Args:
++        n: A non-negative integer.
++
++    Returns:
++        A string like ``"1st"``, ``"2nd"``, ``"4th"``, ``"11th"``.
++
++    Raises:
++        TypeError: If ``n`` is not an integer (``bool`` is rejected).
++        ValueError: If ``n`` is negative.
++    """
++    if isinstance(n, bool) or not isinstance(n, int):
++        raise TypeError(f"expected int, got {type(n).__name__}")
++    if n < 0:
++        raise ValueError("ordinal requires a non-negative integer")
++
++    tens = n % 100
++    if tens in (11, 12, 13):
++        suffix = "th"
++    else:
++        last_digit = n % 10
++        if last_digit == 1:
++            suffix = "st"
++        elif last_digit == 2:
++            suffix = "nd"
++        elif last_digit == 3:
++            suffix = "rd"
++        else:
++            suffix = "th"
++
++    return f"{n}{suffix}"

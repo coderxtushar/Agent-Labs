@@ -1,0 +1,31 @@
+diff --git a/src/textkit/stats.py b/src/textkit/stats.py
+--- a/src/textkit/stats.py
++++ b/src/textkit/stats.py
+@@ -6,7 +6,12 @@
+ def word_count(text: str) -> int:
+     """Return the number of words in ``text``.
+ 
+-    A word is a maximal run of non-whitespace characters.
++    A word is a maximal run of non-whitespace characters.  A character
++    is a separator iff ``str.isspace()`` is ``True`` for it (spaces,
++    tabs, newlines, carriage returns, and Unicode whitespace such as
++    U+00A0 NO-BREAK SPACE or U+3000 IDEOGRAPHIC SPACE).  A run of
++    whitespace counts as one separator, and leading or trailing
++    whitespace adds no words.
+ 
+     Args:
+         text: Input text.
+@@ -14,4 +19,12 @@
+     Returns:
+         The number of words.
+     """
+-    return len(text.split(" "))
++    count = 0
++    in_word = False
++    for char in text:
++        if char.isspace():
++            in_word = False
++        elif not in_word:
++            count += 1
++            in_word = True
++    return count

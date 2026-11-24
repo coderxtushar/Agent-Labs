@@ -1,0 +1,622 @@
+{
+  "generated_at": "2026-11-23T12:24:16.412103+00:00",
+  "report_version": "1.0",
+  "config_snapshot": {
+    "created_at": "2026-11-20T11:50:04.524405+00:00",
+    "benchmark": {
+      "id": "textkit",
+      "version": "1.0",
+      "tasks": [
+        {
+          "key": "textkit-slugify-collapse@1.0",
+          "category": "bug_fix",
+          "difficulty": "easy",
+          "grading_version": "1.0",
+          "validation_status": "valid",
+          "image": "agentbench/benchmark-python:3.12"
+        },
+        {
+          "key": "textkit-truncate-boundary@1.0",
+          "category": "regression_fix",
+          "difficulty": "medium",
+          "grading_version": "1.0",
+          "validation_status": "valid",
+          "image": "agentbench/benchmark-python:3.12"
+        },
+        {
+          "key": "textkit-wordwrap@1.0",
+          "category": "feature",
+          "difficulty": "medium",
+          "grading_version": "1.0",
+          "validation_status": "valid",
+          "image": "agentbench/benchmark-python:3.12"
+        }
+      ]
+    },
+    "agent": {
+      "agent_config_id": "08cb19917bca42fb815f28598e9b15de",
+      "name": "qwen2.5-coder-7b-local",
+      "version": "1.0",
+      "adapter": "openai_tools",
+      "provider": null,
+      "model": "qwen2.5-coder-7b-32k",
+      "prompt_version": "1.0",
+      "tools_version": "1.0",
+      "config": {
+        "model": "qwen2.5-coder-7b-32k",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "max_tokens": 4096,
+        "request_retries": 3
+      },
+      "sampling": {},
+      "is_simulated": false,
+      "provenance": "live_model",
+      "include_hints": false,
+      "capabilities": {
+        "key": "openai_tools",
+        "display_name": "OpenAI-compatible tool-calling agent",
+        "description": "Host-side agent loop; tools run inside the sandbox. Works with any endpoint exposing /chat/completions with tool calling.",
+        "is_simulated": false,
+        "requires_network": true,
+        "requires_credentials": [
+          "AGENTBENCH_OPENAI_API_KEY"
+        ],
+        "reports_token_usage": true,
+        "reports_cost": true,
+        "supports_cancellation": true,
+        "streams_events": true,
+        "contract_version": "1.0",
+        "config_schema": {
+          "model": {
+            "type": "string",
+            "required": true
+          },
+          "base_url": {
+            "type": "string",
+            "description": "Defaults to the configured provider"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "default": 4096
+          },
+          "allow_run_command": {
+            "type": "boolean",
+            "default": true
+          },
+          "request_retries": {
+            "type": "integer",
+            "default": 3
+          }
+        }
+      },
+      "readiness_at_launch": {
+        "ready": true,
+        "detail": "credentials present for http://127.0.0.1:11434/v1",
+        "missing": []
+      }
+    },
+    "execution": {
+      "repetitions": 1,
+      "concurrency": 1,
+      "seed": null,
+      "include_hints": false,
+      "limits_override": {},
+      "sandbox_provider": "docker",
+      "infra_retry_limit": 2,
+      "hard_ceilings": {
+        "max_agent_timeout_s": 3600,
+        "max_memory_mb": 4096,
+        "max_cpus": 4.0
+      }
+    },
+    "platform": {
+      "version": "0.1.0"
+    }
+  },
+  "metrics": {
+    "experiment_id": "c2e6c8096e294143926423ad0fa056ec",
+    "name": "live-qwen2.5-coder-7b-local",
+    "state": "completed",
+    "agent": {
+      "label": "qwen2.5-coder-7b-local@1.0",
+      "adapter": "openai_tools",
+      "model": "qwen2.5-coder-7b-32k",
+      "is_simulated": false
+    },
+    "provenance": {
+      "value": "live_model",
+      "label": "Live model run",
+      "caveat": "Produced by real model inference. Scope is limited to the tasks in this benchmark; it does not measure general coding capability.",
+      "is_model_result": true
+    },
+    "benchmark": "textkit@1.0",
+    "grading_version": "1.0",
+    "repetitions": 1,
+    "computed_at": "2026-11-23T12:24:16.411011+00:00",
+    "completeness": {
+      "total_runs": 3,
+      "finished_runs": 3,
+      "pending_runs": 0,
+      "active_runs": 0,
+      "run_completeness": 1.0,
+      "is_complete": true
+    },
+    "outcomes": {
+      "solved": 0,
+      "unsolved": 0,
+      "timeout": 0,
+      "agent_error": 0,
+      "infra_error": 3,
+      "invalid_task": 0,
+      "grading_error": 0,
+      "cancelled": 0
+    },
+    "success_rate_attributable": {
+      "value": null,
+      "percent": null,
+      "numerator": 0,
+      "denominator": 0,
+      "ci_low": null,
+      "ci_high": null,
+      "ci_method": null,
+      "small_sample": false,
+      "interpretation_warning": null
+    },
+    "success_rate_graded": {
+      "value": null,
+      "percent": null,
+      "numerator": 0,
+      "denominator": 0,
+      "ci_low": null,
+      "ci_high": null,
+      "ci_method": null,
+      "small_sample": false,
+      "interpretation_warning": null
+    },
+    "pass_at_1": {
+      "value": null,
+      "percent": null,
+      "numerator": 0,
+      "denominator": 0,
+      "ci_low": null,
+      "ci_high": null,
+      "ci_method": null,
+      "small_sample": false,
+      "interpretation_warning": null
+    },
+    "pass_at_k": {
+      "values": {},
+      "estimator": null,
+      "note": "not reported: the experiment ran 1 repetition(s) per task"
+    },
+    "reliability": {
+      "regression_count": 0,
+      "regression_rate": {
+        "value": null,
+        "percent": null,
+        "numerator": 0,
+        "denominator": 0,
+        "ci_low": null,
+        "ci_high": null,
+        "ci_method": null,
+        "small_sample": false,
+        "interpretation_warning": null
+      },
+      "timeout_rate": {
+        "value": null,
+        "percent": null,
+        "numerator": 0,
+        "denominator": 0,
+        "ci_low": null,
+        "ci_high": null,
+        "ci_method": null,
+        "small_sample": false,
+        "interpretation_warning": null
+      },
+      "infra_failure_rate": {
+        "value": 1.0,
+        "percent": 100.0,
+        "numerator": 3,
+        "denominator": 3,
+        "ci_low": 0.4385,
+        "ci_high": 1.0,
+        "ci_method": "Wilson score interval, 95%",
+        "small_sample": true,
+        "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+      },
+      "infra_retry_total": 9,
+      "excluded_from_rates": 3
+    },
+    "runtime": {
+      "total_s": 0.1,
+      "mean_s": 0.033,
+      "median_s": 0.033,
+      "p90_s": 0.034
+    },
+    "usage": {
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_total": null,
+      "cost_sources": {},
+      "runs_without_reported_usage": 3,
+      "note": "token and cost figures cover only runs where the adapter reported them; cost_sources records how each figure was derived"
+    },
+    "by_category": {
+      "bug_fix": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 0,
+        "success_rate_attributable": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "regressions": 0
+      },
+      "feature": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 0,
+        "success_rate_attributable": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "regressions": 0
+      },
+      "regression_fix": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 0,
+        "success_rate_attributable": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "regressions": 0
+      }
+    },
+    "by_difficulty": {
+      "easy": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 0,
+        "success_rate_attributable": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "regressions": 0
+      },
+      "medium": {
+        "tasks": 2,
+        "attempts": 2,
+        "solved": 0,
+        "success_rate_attributable": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "regressions": 0
+      }
+    },
+    "failure_categories": {
+      "infrastructure_failure": 3
+    },
+    "tasks": [
+      {
+        "task_key": "textkit-slugify-collapse@1.0",
+        "task_id": "textkit-slugify-collapse",
+        "title": "slugify emits repeated and dangling separators",
+        "category": "bug_fix",
+        "difficulty": "easy",
+        "attempts": 1,
+        "solved": 0,
+        "unsolved": 0,
+        "timeout": 0,
+        "agent_error": 0,
+        "infra_error": 1,
+        "invalid_task": 0,
+        "grading_error": 0,
+        "cancelled": 0,
+        "regressions": 0,
+        "mean_duration_s": 0.034,
+        "pass_at_1": null,
+        "pass_at_k": {},
+        "success_rate_attributable": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        }
+      },
+      {
+        "task_key": "textkit-truncate-boundary@1.0",
+        "task_id": "textkit-truncate-boundary",
+        "title": "truncate returns strings longer than the requested limit",
+        "category": "regression_fix",
+        "difficulty": "medium",
+        "attempts": 1,
+        "solved": 0,
+        "unsolved": 0,
+        "timeout": 0,
+        "agent_error": 0,
+        "infra_error": 1,
+        "invalid_task": 0,
+        "grading_error": 0,
+        "cancelled": 0,
+        "regressions": 0,
+        "mean_duration_s": 0.033,
+        "pass_at_1": null,
+        "pass_at_k": {},
+        "success_rate_attributable": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        }
+      },
+      {
+        "task_key": "textkit-wordwrap@1.0",
+        "task_id": "textkit-wordwrap",
+        "title": "Implement greedy word wrapping in wrap_text",
+        "category": "feature",
+        "difficulty": "medium",
+        "attempts": 1,
+        "solved": 0,
+        "unsolved": 0,
+        "timeout": 0,
+        "agent_error": 0,
+        "infra_error": 1,
+        "invalid_task": 0,
+        "grading_error": 0,
+        "cancelled": 0,
+        "regressions": 0,
+        "mean_duration_s": 0.031,
+        "pass_at_1": null,
+        "pass_at_k": {},
+        "success_rate_attributable": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        }
+      }
+    ],
+    "warnings": [
+      "3 run(s) failed for infrastructure reasons and are excluded from success rates",
+      "a single repetition per task cannot show run-to-run variance; raise repetitions to measure reliability"
+    ]
+  },
+  "runs": [
+    {
+      "run_id": "e90356f7a8a34174b884723a712cca67",
+      "experiment_id": "c2e6c8096e294143926423ad0fa056ec",
+      "experiment_name": "live-qwen2.5-coder-7b-local",
+      "task_key": "textkit-slugify-collapse@1.0",
+      "task_category": "bug_fix",
+      "task_difficulty": "easy",
+      "attempt_index": 0,
+      "state": "completed",
+      "outcome": "infra_error",
+      "counts_toward_success_rate": false,
+      "graded_passed": null,
+      "grading_score": null,
+      "tests_passed": null,
+      "tests_failed": null,
+      "failure_category": "infrastructure_failure",
+      "failure_source": "rule",
+      "files_changed": null,
+      "insertions": null,
+      "deletions": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "infra_attempts": 3,
+      "total_s": 0.034,
+      "agent_s": null,
+      "grading_s": null,
+      "sandbox_provider": null,
+      "provenance": "live_model",
+      "termination_reason": "infrastructure failure after 3 attempt(s): image 'agentbench/benchmark-python:3.12' is not present locally. Pull it first (`docker pull agentbench/benchmark-python:3.12`); image pulls are not performed implicitly during a benchmark run so that runs stay reproducible and offline-safe."
+    },
+    {
+      "run_id": "f072fd7c37484aa8869fd20909f7f9d8",
+      "experiment_id": "c2e6c8096e294143926423ad0fa056ec",
+      "experiment_name": "live-qwen2.5-coder-7b-local",
+      "task_key": "textkit-truncate-boundary@1.0",
+      "task_category": "regression_fix",
+      "task_difficulty": "medium",
+      "attempt_index": 0,
+      "state": "completed",
+      "outcome": "infra_error",
+      "counts_toward_success_rate": false,
+      "graded_passed": null,
+      "grading_score": null,
+      "tests_passed": null,
+      "tests_failed": null,
+      "failure_category": "infrastructure_failure",
+      "failure_source": "rule",
+      "files_changed": null,
+      "insertions": null,
+      "deletions": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "infra_attempts": 3,
+      "total_s": 0.033,
+      "agent_s": null,
+      "grading_s": null,
+      "sandbox_provider": null,
+      "provenance": "live_model",
+      "termination_reason": "infrastructure failure after 3 attempt(s): image 'agentbench/benchmark-python:3.12' is not present locally. Pull it first (`docker pull agentbench/benchmark-python:3.12`); image pulls are not performed implicitly during a benchmark run so that runs stay reproducible and offline-safe."
+    },
+    {
+      "run_id": "f0acd30d7dc74afc9caaeaea630e0903",
+      "experiment_id": "c2e6c8096e294143926423ad0fa056ec",
+      "experiment_name": "live-qwen2.5-coder-7b-local",
+      "task_key": "textkit-wordwrap@1.0",
+      "task_category": "feature",
+      "task_difficulty": "medium",
+      "attempt_index": 0,
+      "state": "completed",
+      "outcome": "infra_error",
+      "counts_toward_success_rate": false,
+      "graded_passed": null,
+      "grading_score": null,
+      "tests_passed": null,
+      "tests_failed": null,
+      "failure_category": "infrastructure_failure",
+      "failure_source": "rule",
+      "files_changed": null,
+      "insertions": null,
+      "deletions": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "infra_attempts": 3,
+      "total_s": 0.031,
+      "agent_s": null,
+      "grading_s": null,
+      "sandbox_provider": null,
+      "provenance": "live_model",
+      "termination_reason": "infrastructure failure after 3 attempt(s): image 'agentbench/benchmark-python:3.12' is not present locally. Pull it first (`docker pull agentbench/benchmark-python:3.12`); image pulls are not performed implicitly during a benchmark run so that runs stay reproducible and offline-safe."
+    }
+  ]
+}

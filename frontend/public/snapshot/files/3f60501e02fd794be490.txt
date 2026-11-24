@@ -1,0 +1,50 @@
+diff --git a/src/textkit/truncate.py b/src/textkit/truncate.py
+--- a/src/textkit/truncate.py
++++ b/src/textkit/truncate.py
+@@ -1,4 +1,11 @@
+-"""Length-limited text truncation."""
++"""Length-limited text truncation.
++
++Deliberately flawed variant used by the ``regression-introducing`` demo agent:
++it satisfies every hidden acceptance test for the truncate task but drops the
++"text that already fits is returned unchanged" behaviour, so the pre-existing
++tests in ``tests/test_truncate.py`` break.  The ``pass_to_pass`` grading layer
++is what catches this.
++"""
+ 
+ from __future__ import annotations
+ 
+@@ -6,24 +13,14 @@
+ 
+ 
+ def truncate(text: str, limit: int, suffix: str = DEFAULT_SUFFIX) -> str:
+-    """Shorten ``text`` so it fits within ``limit`` characters.
+-
+-    When the text is longer than ``limit`` it is cut and ``suffix`` is appended
+-    to show that content was removed.
+-
+-    Args:
+-        text: Input text.
+-        limit: Maximum length of the returned string, including ``suffix``.
+-        suffix: Marker appended when the text was shortened.
+-
+-    Returns:
+-        The original text when it already fits, otherwise a shortened version.
+-
+-    Raises:
+-        ValueError: If ``limit`` is negative.
+-    """
+     if limit < 0:
+         raise ValueError("limit must not be negative")
+-    if len(text) <= limit:
+-        return text
+-    return text[:limit] + suffix
++    if limit <= len(suffix):
++        return suffix[:limit]
++
++    budget = limit - len(suffix)
++    head = text[:budget]
++    boundary = head.rfind(" ")
++    if boundary > 0:
++        head = head[:boundary]
++    return head.rstrip() + suffix

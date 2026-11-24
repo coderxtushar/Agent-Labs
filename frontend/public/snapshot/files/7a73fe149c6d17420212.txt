@@ -1,0 +1,76 @@
+diff --git a/src/textkit/width.py b/src/textkit/width.py
+--- a/src/textkit/width.py
++++ b/src/textkit/width.py
+@@ -2,9 +2,22 @@
+ 
+ from __future__ import annotations
+ 
++import unicodedata
++
+ 
+ def display_width(text: str) -> int:
+     """Return the number of terminal columns ``text`` occupies.
++
++    A character contributes to the width as follows:
++
++    - 0 columns if it is a combining mark (non-zero canonical
++      combining class) or a format character (Unicode general category
++      ``Cf``, e.g. U+200B ZERO WIDTH SPACE or U+200D ZERO WIDTH JOINER);
++    - 2 columns if its East Asian Width property is ``W`` (wide) or
++      ``F`` (fullwidth), covering CJK ideographs, fullwidth forms and
++      most emoji;
++    - 1 column otherwise, including halfwidth and ambiguous-width
++      characters.
+ 
+     Args:
+         text: Input text.
+@@ -12,13 +25,22 @@
+     Returns:
+         The display width in columns.
+     """
+-    return len(text)
++    total = 0
++    for ch in text:
++        if unicodedata.combining(ch) or unicodedata.category(ch) == "Cf":
++            continue
++        if unicodedata.east_asian_width(ch) in ("W", "F"):
++            total += 2
++        else:
++            total += 1
++    return total
+ 
+ 
+ def pad(text: str, width: int, align: str = "left") -> str:
+     """Pad ``text`` with spaces so it occupies ``width`` display columns.
+ 
+-    Text that already occupies ``width`` columns or more is returned unchanged.
++    Text that already occupies ``width`` columns or more is returned
++    unchanged.
+ 
+     Args:
+         text: Input text.
+@@ -27,13 +49,20 @@
+ 
+     Returns:
+         The padded text.
++
++    Raises:
++        ValueError: If ``align`` is not ``"left"``, ``"right"`` or
++            ``"center"``.
+     """
+-    gap = width - len(text)
++    gap = width - display_width(text)
+     if gap <= 0:
+         return text
++    if align == "left":
++        return text + " " * gap
+     if align == "right":
+         return " " * gap + text
+     if align == "center":
+-        left = (gap + 1) // 2
+-        return " " * left + text + " " * (gap - left)
+-    return text + " " * gap
++        left = gap // 2
++        right = gap - left
++        return " " * left + text + " " * right
++    raise ValueError(f"align must be 'left', 'right' or 'center', got {align!r}")

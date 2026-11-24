@@ -1,0 +1,30 @@
+diff --git a/src/textkit/indent.py b/src/textkit/indent.py
+--- a/src/textkit/indent.py
++++ b/src/textkit/indent.py
+@@ -3,7 +3,7 @@
+ from __future__ import annotations
+ 
+ 
+-def indent(text: str, prefix: str) -> str:
++def indent(text: str, prefix: str, *, skip_blank: bool = False) -> str:
+     """Add ``prefix`` to the start of every line of ``text``.
+ 
+     Line endings (``\\n``, ``\\r\\n``) are preserved exactly, and no newline is
+@@ -12,8 +12,16 @@
+     Args:
+         text: Input text.
+         prefix: String to put in front of each line.
++        skip_blank: When True, lines that are empty or contain only whitespace
++            are returned unchanged (no prefix is added, and their own
++            whitespace is kept).
+ 
+     Returns:
+         The indented text.
+     """
+-    return "".join(prefix + line for line in text.splitlines(keepends=True))
++    lines = text.splitlines(keepends=True)
++    if not skip_blank:
++        return "".join(prefix + line for line in lines)
++    return "".join(
++        line if not line.strip() else prefix + line for line in lines
++    )

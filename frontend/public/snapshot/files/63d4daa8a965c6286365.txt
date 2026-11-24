@@ -1,0 +1,39 @@
+diff --git a/src/textkit/pairs.py b/src/textkit/pairs.py
+--- a/src/textkit/pairs.py
++++ b/src/textkit/pairs.py
+@@ -11,8 +11,9 @@
+     """Parse ``"key=value; other=value"`` into a dictionary.
+ 
+     Segments are separated by ``sep``; empty or whitespace-only segments are
+-    ignored. Keys and values are stripped of surrounding whitespace. When a key
+-    repeats, the last value wins.
++    ignored. Keys and values are stripped of surrounding whitespace. Only the
++    first ``=`` in a segment separates the key from the value, so values may
++    contain further ``=`` characters. When a key repeats, the last value wins.
+ 
+     Args:
+         text: Input text.
+@@ -22,14 +23,21 @@
+         The parsed pairs.
+ 
+     Raises:
+-        ParseError: If a segment is malformed.
++        ParseError: If a segment is malformed. This happens when a non-empty
++            segment contains no ``=`` at all, or when the portion before the
++            first ``=`` is empty or whitespace-only. The error message names
++            the offending segment (stripped of surrounding whitespace).
+     """
+     result: dict[str, str] = {}
+     for segment in text.split(sep):
+         if not segment.strip():
+             continue
+-        parts = segment.split("=")
++        parts = segment.split("=", 1)
++        if len(parts) != 2:
++            raise ParseError(segment.strip())
+         key = parts[0].strip()
+         value = parts[1].strip()
++        if not key:
++            raise ParseError(segment.strip())
+         result[key] = value
+     return result

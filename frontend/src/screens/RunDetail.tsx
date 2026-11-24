@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { API_BASE_URL, downloadUrl } from "../api/client";
+import { SNAPSHOT_MODE } from "../api/snapshot";
 import { useAnnotateRun, useCapabilities, useRun, useRunEvents, useRunPatch } from "../api/hooks";
 import type { Grading, GradingLayer, ResourceSummary, RunDetail as RunDetailData, RunEvent } from "../api/types";
 import {
@@ -53,7 +54,8 @@ function useLiveEvents(runId: string | undefined, enabled: boolean, afterSeq: nu
   });
 
   useEffect(() => {
-    if (!runId || !enabled) return;
+    // A static snapshot has no server to stream from; its runs are all finished.
+    if (!runId || !enabled || SNAPSHOT_MODE) return;
     const source = new EventSource(`${API_BASE_URL}/runs/${runId}/events/stream?after_seq=${afterSeq}`);
     source.addEventListener("event", (message) => {
       const parsed = JSON.parse((message as MessageEvent<string>).data) as RunEvent;

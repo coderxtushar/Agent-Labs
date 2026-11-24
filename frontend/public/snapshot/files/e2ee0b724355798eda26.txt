@@ -1,0 +1,101 @@
+diff --git a/src/textkit/pairs.py b/src/textkit/pairs.py
+--- a/src/textkit/pairs.py
++++ b/src/textkit/pairs.py
+@@ -12,7 +12,8 @@
+ 
+     Segments are separated by ``sep``; empty or whitespace-only segments are
+     ignored. Keys and values are stripped of surrounding whitespace. When a key
+-    repeats, the last value wins.
++    repeats, the last value wins. The first ``=`` in a segment separates the key
++    from the value, so values may themselves contain ``=``.
+ 
+     Args:
+         text: Input text.
+@@ -22,14 +23,19 @@
+         The parsed pairs.
+ 
+     Raises:
+-        ParseError: If a segment is malformed.
++        ParseError: If a segment is malformed (no ``=`` present, or an empty
++            key).
+     """
+     result: dict[str, str] = {}
+     for segment in text.split(sep):
+         if not segment.strip():
+             continue
+-        parts = segment.split("=")
+-        key = parts[0].strip()
+-        value = parts[1].strip()
++        key, separator, value = segment.partition("=")
++        if separator == "":
++            raise ParseError(f"Malformed pair: {segment.strip()!r}")
++        key = key.strip()
++        value = value.strip()
++        if not key:
++            raise ParseError(f"Malformed pair: {segment.strip()!r}")
+         result[key] = value
+     return result
+diff --git a/tmp/check_pairs.py b/tmp/check_pairs.py
+--- /dev/null
++++ b/tmp/check_pairs.py
+@@ -0,0 +1,60 @@
++from textkit.pairs import parse_pairs, ParseError
++
++
++def offending_segments(text, sep=";"):
++    out = []
++    for s in text.split(sep):
++        st = s.strip()
++        if not st:
++            continue
++        key = st.split("=", 1)[0]
++        if not st or "=" not in st or not key.strip():
++            out.append(st)
++    return out
++
++
++def check_raise(bad, expected_key=None):
++    try:
++        parse_pairs(bad)
++        raise AssertionError(f"did not raise for {bad!r}")
++    except ParseError as e:
++        for seg in offending_segments(bad):
++            assert seg in str(e), (f"segment {seg!r} not in message {e!r}")
++            break
++        else:
++            raise AssertionError(f"no offending segment identified: {bad!r} -> {e!r}")
++        if expected_key is not None:
++            assert expected_key in str(e)
++
++
++# 1) No '=' in a non-empty segment -> ParseError
++check_raise("a=1;oops")
++check_raise("oops")
++check_raise("hello; world=1")
++check_raise("a=1;oops; b=2")
++check_raise("   ;oops   ")
++
++# 2) Empty / blank key -> ParseError
++check_raise("=1")
++check_raise("  = 2")
++check_raise("a=1;=2")
++check_raise("= 1")
++
++# 3) Values may contain '='
++assert parse_pairs("expr=x=1") == {"expr": "x=1"}, parse_pairs("expr=x=1")
++assert parse_pairs("a=1==2") == {"a": "1==2"}
++assert parse_pairs("a=x; b=c=d") == {"a": "x", "b": "c=d"}
++print("OK values keep later =")
++
++# 4) Existing behavior
++assert parse_pairs("a=1;b=2") == {"a": "1", "b": "2"}
++assert parse_pairs(" a = 1 ; ; b= 2 ;") == {"a": "1", "b": "2"}
++assert parse_pairs("") == {}
++assert parse_pairs("a=1,b=2", sep=",") == {"a": "1", "b": "2"}
++assert parse_pairs("key=") == {"key": ""}
++assert parse_pairs("a=1;a=2") == {"a": "2"}
++assert issubclass(ParseError, ValueError)
++
++# whitespace in key still works and is stripped
++assert parse_pairs("  key  =  value  ") == {"key": "value"}
++print("ALL OK")

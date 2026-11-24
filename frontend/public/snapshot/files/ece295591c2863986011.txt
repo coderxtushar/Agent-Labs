@@ -1,0 +1,76 @@
+diff --git a/src/textkit/width.py b/src/textkit/width.py
+--- a/src/textkit/width.py
++++ b/src/textkit/width.py
+@@ -2,9 +2,32 @@
+ 
+ from __future__ import annotations
+ 
++import unicodedata
++
++
++def _character_width(ch: str) -> int:
++    """Return the terminal display width of a single character.
++
++    Zero for combining marks and format characters (``Cf``), two for
++    wide (``W``) and fullwidth (``F``) East Asian characters, and one
++    otherwise.
++    """
++    if not ch:
++        return 0
++    if unicodedata.combining(ch) != 0 or unicodedata.category(ch) == "Cf":
++        return 0
++    if unicodedata.east_asian_width(ch) in ("W", "F"):
++        return 2
++    return 1
++
+ 
+ def display_width(text: str) -> int:
+     """Return the number of terminal columns ``text`` occupies.
++
++    Combining marks and format characters (e.g. U+200B ZERO WIDTH SPACE)
++    occupy 0 columns; characters whose East Asian Width is ``W`` or ``F``
++    (CJK ideographs, fullwidth forms, most emoji) occupy 2 columns;
++    everything else occupies 1 column.
+ 
+     Args:
+         text: Input text.
+@@ -12,13 +35,14 @@
+     Returns:
+         The display width in columns.
+     """
+-    return len(text)
++    return sum(_character_width(ch) for ch in text)
+ 
+ 
+ def pad(text: str, width: int, align: str = "left") -> str:
+     """Pad ``text`` with spaces so it occupies ``width`` display columns.
+ 
+-    Text that already occupies ``width`` columns or more is returned unchanged.
++    Text that already occupies ``width`` columns or more is returned
++    unchanged.
+ 
+     Args:
+         text: Input text.
+@@ -27,13 +51,20 @@
+ 
+     Returns:
+         The padded text.
++
++    Raises:
++        ValueError: If ``align`` is not one of ``"left"``, ``"right"``
++            or ``"center"``.
+     """
+-    gap = width - len(text)
++    if align not in ("left", "right", "center"):
++        raise ValueError(f"align must be 'left', 'right' or 'center', got {align!r}")
++
++    gap = width - display_width(text)
+     if gap <= 0:
+         return text
+     if align == "right":
+         return " " * gap + text
+     if align == "center":
+-        left = (gap + 1) // 2
++        left = gap // 2
+         return " " * left + text + " " * (gap - left)
+     return text + " " * gap

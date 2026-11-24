@@ -6,24 +6,14 @@
  * "request failed" — a user debugging a benchmark needs the real reason.
  */
 
+import { ApiError } from "./errors";
+import { SNAPSHOT_MODE, readOnlyError, snapshotDownloadUrl, snapshotGet, snapshotGetText } from "./snapshot";
 import type { ApiErrorBody } from "./types";
+
+export { ApiError };
 
 export const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://127.0.0.1:8000/api/v1";
-
-export class ApiError extends Error {
-  readonly status: number;
-  readonly code: string;
-  readonly fields: { location: string; message: string }[];
-
-  constructor(status: number, code: string, message: string, fields: { location: string; message: string }[] = []) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-    this.fields = fields;
-  }
-}
 
 function buildUrl(path: string, params?: Record<string, string | number | boolean | undefined | null>): string {
   const url = new URL(`${API_BASE_URL}${path}`);
@@ -60,6 +50,7 @@ export async function apiGet<T>(
   path: string,
   params?: Record<string, string | number | boolean | undefined | null>,
 ): Promise<T> {
+  if (SNAPSHOT_MODE) return snapshotGet<T>(path, params);
   const response = await fetch(buildUrl(path, params), { headers: { Accept: "application/json" } });
   if (!response.ok) throw await toApiError(response);
   return (await response.json()) as T;
@@ -69,12 +60,14 @@ export async function apiGetText(
   path: string,
   params?: Record<string, string | number | boolean | undefined | null>,
 ): Promise<string> {
+  if (SNAPSHOT_MODE) return snapshotGetText(path, params);
   const response = await fetch(buildUrl(path, params));
   if (!response.ok) throw await toApiError(response);
   return await response.text();
 }
 
 async function mutate<T>(method: string, path: string, body?: unknown): Promise<T> {
+  if (SNAPSHOT_MODE) throw readOnlyError();
   const response = await fetch(buildUrl(path), {
     method,
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -93,4 +86,4 @@ export const apiDelete = <T>(path: string): Promise<T> => mutate<T>("DELETE", pa
 export const downloadUrl = (
   path: string,
   params?: Record<string, string | number | boolean | undefined | null>,
-): string => buildUrl(path, params);
+): string => (SNAPSHOT_MODE ? snapshotDownloadUrl(path, params) : buildUrl(path, params));

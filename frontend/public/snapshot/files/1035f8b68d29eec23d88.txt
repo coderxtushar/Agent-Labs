@@ -1,0 +1,41 @@
+diff --git a/src/textkit/dedupe.py b/src/textkit/dedupe.py
+--- a/src/textkit/dedupe.py
++++ b/src/textkit/dedupe.py
+@@ -4,24 +4,26 @@
+ 
+ 
+ def dedupe_words(words, *, case_sensitive=True):
+-    """Return ``words`` with duplicates removed, keeping first occurrences.
++    """Return a new list with duplicates removed, keeping first occurrences.
++
++    The input is never modified; any iterable of strings may be passed,
++    and it is consumed exactly once.
+ 
+     Args:
+-        words: The words to de-duplicate.
++        words: The words to de-duplicate (any iterable).
+         case_sensitive: When False, words that differ only by case (compared
+             with ``str.lower``) count as duplicates and the first spelling seen
+             is kept.
+ 
+     Returns:
+-        The de-duplicated words, in their original order.
++        A new list with the de-duplicated words, in their original order.
+     """
+     seen = set()
+-    index = 0
+-    while index < len(words):
+-        key = words[index] if case_sensitive else words[index].lower()
++    result = []
++    for word in words:
++        key = word if case_sensitive else word.lower()
+         if key in seen:
+-            del words[index]
+-        else:
+-            seen.add(key)
+-            index += 1
+-    return words
++            continue
++        seen.add(key)
++        result.append(word)
++    return result

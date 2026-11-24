@@ -1,0 +1,39 @@
+diff --git a/src/textkit/slug.py b/src/textkit/slug.py
+--- a/src/textkit/slug.py
++++ b/src/textkit/slug.py
+@@ -1,19 +1,23 @@
+ """URL slug generation."""
+ 
+ from __future__ import annotations
++
++import re
+ 
+ 
+ def slugify(text: str, sep: str = "-") -> str:
+     """Convert ``text`` into a lowercase URL slug.
+ 
+-    Every character that is not a letter or digit becomes the separator.
++    A run of non-alphanumeric characters is collapsed into a single
++    separator, so the result never starts or ends with ``sep``.
+ 
+     Args:
+         text: Input text.
+         sep: Separator character to use between words.
+ 
+     Returns:
+-        The slugified string.
++        The slugified string. An empty string is returned when ``text``
++        contains no alphanumeric characters.
+ 
+     Raises:
+         ValueError: If ``sep`` is not exactly one character.
+@@ -21,7 +25,5 @@
+     if len(sep) != 1:
+         raise ValueError("sep must be a single character")
+ 
+-    pieces = []
+-    for char in text.lower():
+-        pieces.append(char if char.isalnum() else sep)
+-    return "".join(pieces)
++    words = re.findall(r"[a-z0-9]+", text.lower())
++    return sep.join(words)

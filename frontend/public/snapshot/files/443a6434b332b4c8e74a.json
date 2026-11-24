@@ -1,0 +1,628 @@
+{
+  "generated_at": "2026-11-23T12:24:16.339470+00:00",
+  "report_version": "1.0",
+  "config_snapshot": {
+    "created_at": "2026-11-20T18:33:13.879282+00:00",
+    "benchmark": {
+      "id": "textkit",
+      "version": "1.0",
+      "tasks": [
+        {
+          "key": "textkit-slugify-collapse@1.0",
+          "category": "bug_fix",
+          "difficulty": "easy",
+          "grading_version": "1.0",
+          "validation_status": "valid",
+          "image": "agentbench/benchmark-python:3.12"
+        },
+        {
+          "key": "textkit-truncate-boundary@1.0",
+          "category": "regression_fix",
+          "difficulty": "medium",
+          "grading_version": "1.0",
+          "validation_status": "valid",
+          "image": "agentbench/benchmark-python:3.12"
+        },
+        {
+          "key": "textkit-wordwrap@1.0",
+          "category": "feature",
+          "difficulty": "medium",
+          "grading_version": "1.0",
+          "validation_status": "valid",
+          "image": "agentbench/benchmark-python:3.12"
+        }
+      ]
+    },
+    "agent": {
+      "agent_config_id": "98286ee6963f438fa95680abcc5c52dc",
+      "name": "ornith-1.5-9b-local",
+      "version": "1.1",
+      "adapter": "openai_tools",
+      "provider": null,
+      "model": "ornith-1.5-9b-32k",
+      "prompt_version": "1.0",
+      "tools_version": "1.0",
+      "config": {
+        "model": "ornith-1.5-9b-32k",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "max_tokens": 8192,
+        "request_retries": 2,
+        "request_timeout_s": 900
+      },
+      "sampling": {},
+      "is_simulated": false,
+      "provenance": "live_model",
+      "include_hints": false,
+      "capabilities": {
+        "key": "openai_tools",
+        "display_name": "OpenAI-compatible tool-calling agent",
+        "description": "Host-side agent loop; tools run inside the sandbox. Works with any endpoint exposing /chat/completions with tool calling.",
+        "is_simulated": false,
+        "requires_network": true,
+        "requires_credentials": [
+          "AGENTBENCH_OPENAI_API_KEY"
+        ],
+        "reports_token_usage": true,
+        "reports_cost": true,
+        "supports_cancellation": true,
+        "streams_events": true,
+        "contract_version": "1.0",
+        "config_schema": {
+          "model": {
+            "type": "string",
+            "required": true
+          },
+          "base_url": {
+            "type": "string",
+            "description": "Defaults to the configured provider"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "default": 4096
+          },
+          "allow_run_command": {
+            "type": "boolean",
+            "default": true
+          },
+          "request_retries": {
+            "type": "integer",
+            "default": 3
+          },
+          "request_timeout_s": {
+            "type": "integer",
+            "default": 180,
+            "description": "Per-request read timeout, 10-1800 s; always clamped to the run's remaining budget. Raise it for slow local or reasoning models."
+          }
+        }
+      },
+      "readiness_at_launch": {
+        "ready": true,
+        "detail": "credentials present for http://127.0.0.1:11434/v1",
+        "missing": []
+      }
+    },
+    "execution": {
+      "repetitions": 1,
+      "concurrency": 1,
+      "seed": null,
+      "include_hints": false,
+      "limits_override": {},
+      "sandbox_provider": "docker",
+      "infra_retry_limit": 2,
+      "hard_ceilings": {
+        "max_agent_timeout_s": 3600,
+        "max_memory_mb": 4096,
+        "max_cpus": 4.0
+      }
+    },
+    "platform": {
+      "version": "0.1.0"
+    }
+  },
+  "metrics": {
+    "experiment_id": "fee65e20de944c0eb7962ef3063caf24",
+    "name": "live-ornith-1.5-9b-local-v1.1",
+    "state": "completed",
+    "agent": {
+      "label": "ornith-1.5-9b-local@1.1",
+      "adapter": "openai_tools",
+      "model": "ornith-1.5-9b-32k",
+      "is_simulated": false
+    },
+    "provenance": {
+      "value": "live_model",
+      "label": "Live model run",
+      "caveat": "Produced by real model inference. Scope is limited to the tasks in this benchmark; it does not measure general coding capability.",
+      "is_model_result": true
+    },
+    "benchmark": "textkit@1.0",
+    "grading_version": "1.0",
+    "repetitions": 1,
+    "computed_at": "2026-11-23T12:24:16.338249+00:00",
+    "completeness": {
+      "total_runs": 3,
+      "finished_runs": 3,
+      "pending_runs": 0,
+      "active_runs": 0,
+      "run_completeness": 1.0,
+      "is_complete": true
+    },
+    "outcomes": {
+      "solved": 1,
+      "unsolved": 0,
+      "timeout": 0,
+      "agent_error": 2,
+      "infra_error": 0,
+      "invalid_task": 0,
+      "grading_error": 0,
+      "cancelled": 0
+    },
+    "success_rate_attributable": {
+      "value": 0.3333,
+      "percent": 33.33,
+      "numerator": 1,
+      "denominator": 3,
+      "ci_low": 0.0615,
+      "ci_high": 0.7923,
+      "ci_method": "Wilson score interval, 95%",
+      "small_sample": true,
+      "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+    },
+    "success_rate_graded": {
+      "value": 1.0,
+      "percent": 100.0,
+      "numerator": 1,
+      "denominator": 1,
+      "ci_low": 0.2065,
+      "ci_high": 1.0,
+      "ci_method": "Wilson score interval, 95%",
+      "small_sample": true,
+      "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+    },
+    "pass_at_1": {
+      "value": 0.3333,
+      "percent": 33.33,
+      "numerator": 1,
+      "denominator": 3,
+      "ci_low": 0.0615,
+      "ci_high": 0.7923,
+      "ci_method": "Wilson score interval, 95%",
+      "small_sample": true,
+      "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+    },
+    "pass_at_k": {
+      "values": {},
+      "estimator": null,
+      "note": "not reported: the experiment ran 1 repetition(s) per task"
+    },
+    "reliability": {
+      "regression_count": 0,
+      "regression_rate": {
+        "value": 0.0,
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 1,
+        "ci_low": 0.0,
+        "ci_high": 0.7935,
+        "ci_method": "Wilson score interval, 95%",
+        "small_sample": true,
+        "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+      },
+      "timeout_rate": {
+        "value": 0.0,
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 3,
+        "ci_low": 0.0,
+        "ci_high": 0.5615,
+        "ci_method": "Wilson score interval, 95%",
+        "small_sample": true,
+        "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+      },
+      "infra_failure_rate": {
+        "value": 0.0,
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 3,
+        "ci_low": 0.0,
+        "ci_high": 0.5615,
+        "ci_method": "Wilson score interval, 95%",
+        "small_sample": true,
+        "interpretation_warning": "only 3 run(s); treat this rate as indicative, not significant"
+      },
+      "infra_retry_total": 0,
+      "excluded_from_rates": 0
+    },
+    "runtime": {
+      "total_s": 365.46,
+      "mean_s": 121.82,
+      "median_s": 99.67,
+      "p90_s": 258.268
+    },
+    "usage": {
+      "input_tokens": 16290,
+      "output_tokens": 1608,
+      "cost_usd_total": null,
+      "cost_sources": {},
+      "runs_without_reported_usage": 2,
+      "note": "token and cost figures cover only runs where the adapter reported them; cost_sources records how each figure was derived"
+    },
+    "by_category": {
+      "bug_fix": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 1,
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "regressions": 0
+      },
+      "feature": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 0,
+        "success_rate_attributable": {
+          "value": 0.0,
+          "percent": 0.0,
+          "numerator": 0,
+          "denominator": 1,
+          "ci_low": 0.0,
+          "ci_high": 0.7935,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "regressions": 0
+      },
+      "regression_fix": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 0,
+        "success_rate_attributable": {
+          "value": 0.0,
+          "percent": 0.0,
+          "numerator": 0,
+          "denominator": 1,
+          "ci_low": 0.0,
+          "ci_high": 0.7935,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "regressions": 0
+      }
+    },
+    "by_difficulty": {
+      "easy": {
+        "tasks": 1,
+        "attempts": 1,
+        "solved": 1,
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "regressions": 0
+      },
+      "medium": {
+        "tasks": 2,
+        "attempts": 2,
+        "solved": 0,
+        "success_rate_attributable": {
+          "value": 0.0,
+          "percent": 0.0,
+          "numerator": 0,
+          "denominator": 2,
+          "ci_low": 0.0,
+          "ci_high": 0.6576,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 2 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        },
+        "regressions": 0
+      }
+    },
+    "failure_categories": {
+      "tool_invocation_error": 2
+    },
+    "tasks": [
+      {
+        "task_key": "textkit-slugify-collapse@1.0",
+        "task_id": "textkit-slugify-collapse",
+        "title": "slugify emits repeated and dangling separators",
+        "category": "bug_fix",
+        "difficulty": "easy",
+        "attempts": 1,
+        "solved": 1,
+        "unsolved": 0,
+        "timeout": 0,
+        "agent_error": 0,
+        "infra_error": 0,
+        "invalid_task": 0,
+        "grading_error": 0,
+        "cancelled": 0,
+        "regressions": 0,
+        "mean_duration_s": 99.67,
+        "pass_at_1": 1.0,
+        "pass_at_k": {},
+        "success_rate_attributable": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": 1.0,
+          "percent": 100.0,
+          "numerator": 1,
+          "denominator": 1,
+          "ci_low": 0.2065,
+          "ci_high": 1.0,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        }
+      },
+      {
+        "task_key": "textkit-truncate-boundary@1.0",
+        "task_id": "textkit-truncate-boundary",
+        "title": "truncate returns strings longer than the requested limit",
+        "category": "regression_fix",
+        "difficulty": "medium",
+        "attempts": 1,
+        "solved": 0,
+        "unsolved": 0,
+        "timeout": 0,
+        "agent_error": 1,
+        "infra_error": 0,
+        "invalid_task": 0,
+        "grading_error": 0,
+        "cancelled": 0,
+        "regressions": 0,
+        "mean_duration_s": 258.268,
+        "pass_at_1": 0.0,
+        "pass_at_k": {},
+        "success_rate_attributable": {
+          "value": 0.0,
+          "percent": 0.0,
+          "numerator": 0,
+          "denominator": 1,
+          "ci_low": 0.0,
+          "ci_high": 0.7935,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        }
+      },
+      {
+        "task_key": "textkit-wordwrap@1.0",
+        "task_id": "textkit-wordwrap",
+        "title": "Implement greedy word wrapping in wrap_text",
+        "category": "feature",
+        "difficulty": "medium",
+        "attempts": 1,
+        "solved": 0,
+        "unsolved": 0,
+        "timeout": 0,
+        "agent_error": 1,
+        "infra_error": 0,
+        "invalid_task": 0,
+        "grading_error": 0,
+        "cancelled": 0,
+        "regressions": 0,
+        "mean_duration_s": 7.521,
+        "pass_at_1": 0.0,
+        "pass_at_k": {},
+        "success_rate_attributable": {
+          "value": 0.0,
+          "percent": 0.0,
+          "numerator": 0,
+          "denominator": 1,
+          "ci_low": 0.0,
+          "ci_high": 0.7935,
+          "ci_method": "Wilson score interval, 95%",
+          "small_sample": true,
+          "interpretation_warning": "only 1 run(s); treat this rate as indicative, not significant"
+        },
+        "success_rate_graded": {
+          "value": null,
+          "percent": null,
+          "numerator": 0,
+          "denominator": 0,
+          "ci_low": null,
+          "ci_high": null,
+          "ci_method": null,
+          "small_sample": false,
+          "interpretation_warning": null
+        }
+      }
+    ],
+    "warnings": [
+      "only 3 scored run(s): differences of a few percent are noise",
+      "a single repetition per task cannot show run-to-run variance; raise repetitions to measure reliability"
+    ]
+  },
+  "runs": [
+    {
+      "run_id": "3995008b8f3b4bbb820e25284b6fa1db",
+      "experiment_id": "fee65e20de944c0eb7962ef3063caf24",
+      "experiment_name": "live-ornith-1.5-9b-local-v1.1",
+      "task_key": "textkit-slugify-collapse@1.0",
+      "task_category": "bug_fix",
+      "task_difficulty": "easy",
+      "attempt_index": 0,
+      "state": "completed",
+      "outcome": "solved",
+      "counts_toward_success_rate": true,
+      "graded_passed": true,
+      "grading_score": 1.0,
+      "tests_passed": 10,
+      "tests_failed": 0,
+      "failure_category": null,
+      "failure_source": null,
+      "files_changed": 1,
+      "insertions": 8,
+      "deletions": 6,
+      "input_tokens": 16290,
+      "output_tokens": 1608,
+      "cost_usd": null,
+      "cost_source": null,
+      "infra_attempts": 0,
+      "total_s": 99.67,
+      "agent_s": 97.07,
+      "grading_s": 1.432,
+      "sandbox_provider": "docker",
+      "provenance": "live_model",
+      "termination_reason": "all required grading layers passed"
+    },
+    {
+      "run_id": "9ac4f9b019d7483ea5b1cea7a12b6757",
+      "experiment_id": "fee65e20de944c0eb7962ef3063caf24",
+      "experiment_name": "live-ornith-1.5-9b-local-v1.1",
+      "task_key": "textkit-truncate-boundary@1.0",
+      "task_category": "regression_fix",
+      "task_difficulty": "medium",
+      "attempt_index": 0,
+      "state": "completed",
+      "outcome": "agent_error",
+      "counts_toward_success_rate": false,
+      "graded_passed": null,
+      "grading_score": null,
+      "tests_passed": null,
+      "tests_failed": null,
+      "failure_category": "tool_invocation_error",
+      "failure_source": "rule",
+      "files_changed": null,
+      "insertions": null,
+      "deletions": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "infra_attempts": 0,
+      "total_s": 258.268,
+      "agent_s": null,
+      "grading_s": null,
+      "sandbox_provider": "docker",
+      "provenance": "live_model",
+      "termination_reason": "model provider unavailable after 3 attempts: transport error: ConnectError: [Errno 61] Connection refused"
+    },
+    {
+      "run_id": "445e3b68123f43c58ae038d03451a3d3",
+      "experiment_id": "fee65e20de944c0eb7962ef3063caf24",
+      "experiment_name": "live-ornith-1.5-9b-local-v1.1",
+      "task_key": "textkit-wordwrap@1.0",
+      "task_category": "feature",
+      "task_difficulty": "medium",
+      "attempt_index": 0,
+      "state": "completed",
+      "outcome": "agent_error",
+      "counts_toward_success_rate": false,
+      "graded_passed": null,
+      "grading_score": null,
+      "tests_passed": null,
+      "tests_failed": null,
+      "failure_category": "tool_invocation_error",
+      "failure_source": "rule",
+      "files_changed": null,
+      "insertions": null,
+      "deletions": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "infra_attempts": 0,
+      "total_s": 7.521,
+      "agent_s": null,
+      "grading_s": null,
+      "sandbox_provider": "docker",
+      "provenance": "live_model",
+      "termination_reason": "model provider unavailable after 3 attempts: transport error: ConnectError: [Errno 61] Connection refused"
+    }
+  ]
+}

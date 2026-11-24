@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { SNAPSHOT_MODE } from "../api/snapshot";
+import { LiveOnly } from "../components/LiveOnly";
+
 import { useLocalModels } from "../api/hooks";
 import type { LocalModelAgent, LocalModels as LocalModelsData, ProvenanceValue } from "../api/types";
 import { RateDisplay, formatDuration, formatRelative, formatTime } from "../components/domain";
@@ -303,6 +306,14 @@ function ModelCard({ model }: { model: Model }) {
 
 // --------------------------------------------------------------------------- //
 export default function LocalModels() {
+  return SNAPSHOT_MODE ? (
+    <LiveOnly title="Local models" what="Models installed in the local Ollama and which agent configs use them." />
+  ) : (
+    <LocalModelsLive />
+  );
+}
+
+function LocalModelsLive() {
   const [live, setLive] = useState(false);
   const query = useLocalModels(live);
   const [search, setSearch] = useState("");

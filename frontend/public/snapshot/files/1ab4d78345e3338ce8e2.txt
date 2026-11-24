@@ -1,0 +1,52 @@
+diff --git a/src/textkit/wrap.py b/src/textkit/wrap.py
+--- a/src/textkit/wrap.py
++++ b/src/textkit/wrap.py
+@@ -1,7 +1,7 @@
+ """Greedy word wrapping.
+ 
+-``wrap_text`` is declared but not implemented; implementing it is one of the
+-bundled benchmark tasks.
++``wrap_text`` is declared but not implemented; implementing it is one of
++the bundled benchmark tasks.
+ """
+ 
+ from __future__ import annotations
+@@ -21,4 +21,37 @@
+     Raises:
+         ValueError: If ``width`` is less than 1.
+     """
+-    raise NotImplementedError("wrap_text is not implemented yet")
++    if width < 1:
++        raise ValueError("width must be at least 1")
++
++    # Splitting on whitespace collapses runs of whitespace into a single
++    # separator and drops leading/trailing whitespace.
++    words = text.split()
++    if not words:
++        return []
++
++    lines: list[str] = []
++    current: str = ""
++
++    for word in words:
++        if len(word) > width:
++            # The word is too long for any single line. Flush whatever is
++            # on the current line, then hard-split the word into consecutive
++            # lines of at most ``width`` characters each.
++            if current:
++                lines.append(current)
++                current = ""
++            lines.extend(word[i : i + width] for i in range(0, len(word), width))
++        else:
++            if not current:
++                current = word
++            elif len(current) + 1 + len(word) <= width:
++                current = f"{current} {word}"
++            else:
++                lines.append(current)
++                current = word
++
++    if current:
++        lines.append(current)
++
++    return lines

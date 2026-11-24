@@ -1,0 +1,38 @@
+diff --git a/src/textkit/accents.py b/src/textkit/accents.py
+--- a/src/textkit/accents.py
++++ b/src/textkit/accents.py
+@@ -1,13 +1,21 @@
+ """Diacritic removal."""
+ 
+ from __future__ import annotations
++
++import unicodedata
+ 
+ 
+ def strip_accents(text: str) -> str:
+     """Remove diacritical marks (accents) from ``text``.
+ 
+     ``"café"`` becomes ``"cafe"``. Characters that carry no diacritic are
+-    returned unchanged.
++    returned unchanged, including non-Latin text (e.g. ``"日本語"``) and
++    base letters that would not survive a naive ASCII round trip (e.g. ``ß``).
++
++    The text is decomposed (NFD) so that both precomposed characters
++    (``"é"``) and an accent written as a separate combining character
++    (``"e\\u0301"``) are handled the same way: the base letter is kept and
++    the combining marks are dropped.
+ 
+     Args:
+         text: Input text.
+@@ -15,4 +23,10 @@
+     Returns:
+         ``text`` without diacritical marks.
+     """
+-    return text.encode("ascii", "ignore").decode("ascii")
++    decomposed = unicodedata.normalize("NFD", text)
++    return "".join(ch for ch in decomposed if not _is_combining_mark(ch))
++
++
++def _is_combining_mark(ch: str) -> bool:
++    """Return True if ``ch`` is a Unicode combining diacritical mark."""
++    return unicodedata.category(ch).startswith("M")

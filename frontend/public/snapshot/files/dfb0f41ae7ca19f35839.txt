@@ -1,0 +1,46 @@
+diff --git a/src/textkit/numbers.py b/src/textkit/numbers.py
+--- a/src/textkit/numbers.py
++++ b/src/textkit/numbers.py
+@@ -16,3 +16,42 @@
+     """
+     word = noun if count == 1 else (plural if plural is not None else noun + "s")
+     return f"{count} {word}"
++
++
++def ordinal(n: int) -> str:
++    """Return ``n`` followed by its English ordinal suffix.
++
++    The suffix is ``st`` for numbers ending in 1, ``nd`` for numbers ending in
++    2, ``rd`` for numbers ending in 3, and ``th`` otherwise. Numbers whose last
++    two digits are 11, 12 or 13 always take ``th``.
++
++    Args:
++        n: A non-negative integer.
++
++    Returns:
++        For example ``"1st"``, ``"22nd"`` or ``"4th"``.
++
++    Raises:
++        ValueError: If ``n`` is negative.
++        TypeError: If ``n`` is not an ``int``. ``bool`` is rejected as well,
++            even though it is a subclass of ``int``.
++    """
++    if isinstance(n, bool) or not isinstance(n, int):
++        raise TypeError(f"Expected an int, got {type(n).__name__}")
++    if n < 0:
++        raise ValueError(f"Expected a non-negative integer, got {n}")
++
++    last_two = n % 100
++    if 11 <= last_two <= 13:
++        suffix = "th"
++    else:
++        last = n % 10
++        if last == 1:
++            suffix = "st"
++        elif last == 2:
++            suffix = "nd"
++        elif last == 3:
++            suffix = "rd"
++        else:
++            suffix = "th"
++    return f"{n}{suffix}"
