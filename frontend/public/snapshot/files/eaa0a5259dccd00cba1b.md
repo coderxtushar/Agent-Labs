@@ -1,6 +1,6 @@
 # Comparison report
 
-Generated 2026-11-24T18:45:00.548365+00:00.
+Generated 2026-11-24T18:59:06.193577+00:00.
 
 **Success rate moved from 67% (2/3) to 33% (1/3). Newly broken: textkit-wordwrap@1.0. Needs more testing: one repetition per task means a single flaky run can flip a task's verdict.**
 

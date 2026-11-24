@@ -15,13 +15,20 @@ exported as *collections* (see ``frontend/src/api/snapshot.ts``).
 Request keys are ``<path>`` or ``<path>?<k>=<v>&...`` with parameters sorted by
 name, raw (not URL-encoded) values, booleans as ``true``/``false``, and empty
 values dropped. ``snapshot.ts`` builds the same key; change both together.
+
+Re-exporting without new results changes nothing on disk: the export is built
+in a staging folder and compared with the published one, ignoring only the
+per-request time stamps (``computed_at``, ``generated_at``, "Generated ... by"),
+so a commit of the snapshot always means the results changed.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
+import tempfile
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -48,6 +55,16 @@ _EXTENSIONS = {
 }
 
 ParamValue = str | int | bool | None
+
+#: Time stamps the API puts in each response. Two exports that differ only here
+#: hold the same results; everything else (created_at, finished_at, ...) counts.
+_ISO = rb"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:[+-]\d\d:\d\d|Z)?"
+_VOLATILE: tuple[tuple[re.Pattern[bytes], bytes], ...] = (
+    (re.compile(rb'"(computed_at|generated_at)":(\s*)"[^"]*"'), rb'"\1":\2""'),
+    # Report headers: "Generated <time> by Agent Labs." and "Generated <time>."
+    (re.compile(rb"^Generated " + _ISO, re.MULTILINE), b"Generated -"),
+    (re.compile(rb"Exported from Agent Labs at " + _ISO), b"Exported from Agent Labs at -"),
+)
 
 
 class SnapshotError(RuntimeError):
@@ -164,15 +181,39 @@ class SnapshotWriter:
         return items
 
 
-def _prepare(out_dir: Path) -> None:
-    """Empty ``out_dir``, but only if it is empty already or a previous snapshot."""
-    if out_dir.exists():
-        if any(out_dir.iterdir()) and not (out_dir / MANIFEST).is_file():
-            raise SnapshotError(
-                f"{out_dir} is not empty and holds no {MANIFEST}; refusing to overwrite it"
-            )
-        shutil.rmtree(out_dir)
-    out_dir.mkdir(parents=True)
+@dataclass(frozen=True)
+class ExportResult:
+    """The manifest now published in ``out_dir``, and whether this export changed it."""
+
+    manifest: dict[str, Any]
+    changed: bool
+
+
+def _check_target(out_dir: Path) -> None:
+    """Only an empty folder or a previous snapshot may be replaced."""
+    if out_dir.exists() and any(out_dir.iterdir()) and not (out_dir / MANIFEST).is_file():
+        raise SnapshotError(
+            f"{out_dir} is not empty and holds no {MANIFEST}; refusing to overwrite it"
+        )
+
+
+def _normalised(content: bytes) -> bytes:
+    for pattern, replacement in _VOLATILE:
+        content = pattern.sub(replacement, content)
+    return content
+
+
+def same_results(first: Path, second: Path) -> bool:
+    """True when two snapshots differ in nothing but their time stamps."""
+    if not (first / MANIFEST).is_file() or not (second / MANIFEST).is_file():
+        return False
+    names = {path.relative_to(first) for path in _files_under(first)}
+    if names != {path.relative_to(second) for path in _files_under(second)}:
+        return False
+    return all(
+        _normalised((first / name).read_bytes()) == _normalised((second / name).read_bytes())
+        for name in names
+    )
 
 
 def export_snapshot(
@@ -180,14 +221,33 @@ def export_snapshot(
     out_dir: Path,
     *,
     now: datetime | None = None,
-) -> dict[str, Any]:
-    """Export every read the UI makes; return the manifest that was written."""
-    _prepare(out_dir)
+) -> ExportResult:
+    """Export every read the UI makes into ``out_dir``, unless nothing changed.
+
+    The export is written to a staging folder first, so a failed export leaves
+    the published snapshot as it was, and an export with no new results (only
+    new time stamps) leaves every file untouched.
+    """
+    _check_target(out_dir)
+    with tempfile.TemporaryDirectory(prefix="agentlabs-snapshot-") as staging_root:
+        staged = Path(staging_root) / "snapshot"
+        staged.mkdir()
+        manifest = _export(client, staged, now=now)
+        if same_results(staged, out_dir):
+            published = json.loads((out_dir / MANIFEST).read_text(encoding="utf-8"))
+            return ExportResult(manifest=published, changed=False)
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
+        out_dir.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(staged, out_dir)
+    return ExportResult(manifest=manifest, changed=True)
+
+
+def _export(client: _Client, out_dir: Path, *, now: datetime | None) -> dict[str, Any]:
     writer = SnapshotWriter(client=client, out_dir=out_dir)
 
     # Platform-wide, parameter-free views.
     for path in (
-        "/health",
         "/system/stats",
         "/system/settings",
         "/system/capabilities",
@@ -198,8 +258,10 @@ def export_snapshot(
         "/agents/adapters",
     ):
         writer.get(path)
-    # Not exported: /system/resources, /system/docker and /system/local-models
-    # describe the live machine; frozen, they would only show the export host.
+    # Not exported: /health, /system/resources, /system/docker and
+    # /system/local-models describe the live machine (is Docker up, how much RAM).
+    # Frozen they would only show the export host, and Docker starting or
+    # stopping would make an export with no new results look changed.
     for fmt in ("json", "jsonl"):
         writer.get("/tasks/export", {"format": fmt})
 

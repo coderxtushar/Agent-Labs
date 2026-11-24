@@ -184,7 +184,7 @@ def experiment_markdown(session: Session, experiment_id: str) -> str:
     lines: list[str] = [
         f"# Experiment report: {metrics.name}",
         "",
-        f"Generated {datetime.now(UTC).isoformat()} by AgentBench Lab.",
+        f"Generated {datetime.now(UTC).isoformat()} by Agent Labs.",
         "",
     ]
 

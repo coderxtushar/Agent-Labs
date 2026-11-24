@@ -1,6 +1,6 @@
 # Comparison report
 
-Generated 2026-11-24T18:45:00.444180+00:00.
+Generated 2026-11-24T18:59:06.037623+00:00.
 
 **Success rate moved from 33% (1/3) to 0% (0/3). Newly broken: textkit-slugify-collapse@1.0. These arms are not directly comparable: the arms have different result provenance (live_model vs simulated); they measure different things. Needs more testing: one repetition per task means a single flaky run can flip a task's verdict.**
 

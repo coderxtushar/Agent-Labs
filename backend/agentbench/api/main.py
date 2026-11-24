@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="AgentBench Lab",
+    title="Agent Labs",
     version=__version__,
     description=DESCRIPTION,
     lifespan=lifespan,
@@ -170,7 +170,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 @app.get("/", include_in_schema=False)
 def root() -> dict[str, Any]:
     return {
-        "name": "AgentBench Lab",
+        "name": "Agent Labs",
         "version": __version__,
         "api": api_prefix,
         "docs": "/docs",

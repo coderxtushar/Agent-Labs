@@ -20,7 +20,7 @@ from agentbench.logging_setup import setup_logging
 app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
-    help="AgentBench Lab - evaluate, compare and debug AI coding agents.",
+    help="Agent Labs - evaluate, compare and debug AI coding agents.",
 )
 db_app = typer.Typer(no_args_is_help=True, help="Database schema management.")
 bench_app = typer.Typer(no_args_is_help=True, help="Benchmark task registry.")
@@ -527,7 +527,11 @@ _DEFAULT_SNAPSHOT_DIR = Path(__file__).resolve().parents[3] / "frontend" / "publ
 @snapshot_app.command("export")
 def snapshot_export(
     out: Annotated[
-        Path, typer.Option(help="Directory to write; replaced if it holds a previous snapshot.")
+        Path,
+        typer.Option(
+            help="Directory to write; replaced if it holds a previous snapshot with different "
+            "results, left untouched if only time stamps would change."
+        ),
     ] = _DEFAULT_SNAPSHOT_DIR,
 ) -> None:
     """Export every read the UI makes into a static, read-only snapshot.
@@ -551,11 +555,20 @@ def snapshot_export(
     # No context manager: the app's lifespan (and so the worker) never starts.
     client = TestClient(api)
     try:
-        manifest = export_snapshot(client, out)
+        result = export_snapshot(client, out)
     except SnapshotError as exc:
         typer.echo(f"snapshot export failed: {exc}", err=True)
         raise typer.Exit(code=1) from exc
+    manifest = result.manifest
     counts = manifest["counts"]
+    if not result.changed:
+        typer.echo(
+            f"no new results since the snapshot in {out} "
+            f"(exported {manifest['generated_at'][:16].replace('T', ' ')} UTC); left it unchanged.\n"
+            f"{counts['experiments']} experiments, {counts['runs']} runs, {counts['tasks']} tasks, "
+            f"{counts['agents']} agents."
+        )
+        return
     typer.echo(
         f"wrote {counts['responses']} responses and {len(manifest['collections'])} collections "
         f"({snapshot_size(out) / 1_048_576:.1f} MB) to {out}\n"

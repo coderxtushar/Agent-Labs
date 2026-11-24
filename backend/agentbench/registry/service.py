@@ -252,7 +252,7 @@ def export_tasks(
         specs,
         benchmark_id=benchmark_id or (first.benchmark_id if first else "custom"),
         benchmark_version=(first.benchmark_version if first else "1.0"),
-        description=f"Exported from AgentBench Lab at {datetime.now(UTC).isoformat()}",
+        description=f"Exported from Agent Labs at {datetime.now(UTC).isoformat()}",
     )
 
 

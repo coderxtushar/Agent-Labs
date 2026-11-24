@@ -368,7 +368,10 @@ annotated; those actions say so. Two views are left out:
    build command to `npm run build:snapshot` and the output to `dist`.
    Unknown paths fall back to the app, so links like `/leaderboard` work.
 3. To publish new results, re-export and push. Without Git, run
-   `npx wrangler pages deploy dist` from `frontend/`.
+   `npx wrangler pages deploy dist` from `frontend/`. Re-exporting with no new
+   results prints "no new results" and changes no files: per-request time
+   stamps alone don't count. A failed export leaves the published snapshot as
+   it was.
 
 **Or on Cloudflare Workers** (a `*.workers.dev` URL): connect the repo with the
 root directory `frontend`. `frontend/wrangler.jsonc` makes `wrangler deploy`
