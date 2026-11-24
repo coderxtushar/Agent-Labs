@@ -1,6 +1,6 @@
 # Comparison report
 
-Generated 2026-11-23T12:24:19.146578+00:00.
+Generated 2026-11-24T18:45:02.199840+00:00.
 
 **Success rate moved from 0% (0/3) to 0% (0/3). No task changed from solved to unsolved or back. These arms are not directly comparable: the arms have different result provenance (simulated vs live_model); they measure different things. Needs more testing: one repetition per task means a single flaky run can flip a task's verdict.**
 

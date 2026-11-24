@@ -1,6 +1,6 @@
 # Experiment report: live-ornith-1.5-9b-local
 
-Generated 2026-11-23T12:24:16.355913+00:00 by AgentBench Lab.
+Generated 2026-11-24T18:44:59.524633+00:00 by AgentBench Lab.
 
 > **Live model run.** Produced by real model inference. Scope is limited to the tasks in this benchmark; it does not measure general coding capability.
 
